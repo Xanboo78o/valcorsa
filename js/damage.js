@@ -91,7 +91,8 @@
     if (d.cd > 0 || d.shattered) return;
     // chassis TOUGH softens (or sharpens) the hit — tough 9 truck shrugs off what folds a bike
     const tough = (car.isPlayer && window.ECON && ECON.mods) ? (ECON.mods().tough ?? 5) : 5;
-    let dash = v * DASH * (1 - (tough - 5) * 0.04);     // impact speed as the driver reads it
+    let dash = v * DASH * (1 - (tough - 5) * 0.04);     // NOTE: v is the impact-NORMAL speed — a fraction of
+    // dash speed even head-on. Tiers below are calibrated to MEASURED wall hits (real ram ≈ 20-45), not display speed.
     // pileup law: hitting a wreck escalates — one crash seeds the next
     if (typeof cars !== 'undefined' && dash > 32) {
       for (const o of cars) {
@@ -99,20 +100,20 @@
         if (Math.hypot(o.x - car.x, o.z - car.z) < 4.5) { dash *= 1.4; break; }
       }
     }
-    if (dash < 25) return;                       // a bump: knockback and you're chillin
+    if (dash < 12) return;                       // a bump: knockback and you're chillin
     d.cd = 0.5;
-    if (dash > 195) return shatter(car);         // full-send head-on: carisvaporizeditis
-    if (dash > 135) return bigCrash(car, dash);  // THE McQUEEN: launched, tumbling, skidding
-    if (dash > 90) {                             // a proper accident — the wall WINS
+    if (dash > 135) return shatter(car);         // full-send head-on: carisvaporizeditis
+    if (dash > 60) return bigCrash(car, dash);   // THE McQUEEN: launched, tumbling, skidding
+    if (dash > 35) {                             // a proper accident — the wall WINS
       car.velX *= 0.22; car.velZ *= 0.22;        // immediate stop: speed dies at the wall
-      d.engine = Math.max(0.25, d.engine - (dash - 90) / 260);
-      if (!d.flat && dash > 120 && Math.random() < 0.35) goFlat(car);
-      if (!d.bumper && dash > 100 && Math.random() < 0.6) {
+      d.engine = Math.max(0.25, d.engine - (dash - 35) / 120);
+      if (!d.flat && dash > 45 && Math.random() < 0.35) goFlat(car);
+      if (!d.bumper && dash > 42 && Math.random() < 0.6) {
         d.bumper = Math.random() < 0.5 ? -1 : 1;      // the bumper tears loose and DRAGS
         if (car.isPlayer) toast('Bumper’s hanging — hear it grinding?');
       }
       if (Math.random() < 0.5) car.spun = 0.9 + Math.random() * 0.6;   // and sometimes you LOSE it
-      car._crumple = Math.min(1, 0.5 + (dash - 90) / 90);
+      car._crumple = Math.min(1, 0.5 + (dash - 35) / 40);
       car._boom = dash;                          // speedfx: the CRUMPLE sound + debris
       bump(car, 0.5);
       if (car.isPlayer) sfx(70, 0.3, 0.4);
