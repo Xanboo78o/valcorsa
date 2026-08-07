@@ -46,13 +46,12 @@ const PHYS = {
   aLatMax: 64,          // high grip -> planted, forgiving (arcade F1)
   steerOver: 1.08,      // little slack past grip -> predictable, few spins
   downforce: 0.16,      // grip gain per (u/s), sticks at speed
-  handbrakeGrip: 0.38,  // rear grip while handbraking: loose enough to swing, enough to CARVE the arc
+  handbrakeGrip: 0.42,  // rear grip while handbraking: loose enough to swing, enough to CARVE the arc
   hbYaw: 2.2,           // extra yaw authority while handbraking, rad/s at full steer + speed
   slideCap: 0.66,       // ~38°: tires saturate — the nose physically cannot rotate past the travel
                         // direction by more than this while drifting (was unbounded: nose spun 180°
                         // past the velocity and the car "accelerated backward")
-  driftBleed: 0.26,     // sliding rubber burns speed — tuned so a HELD drift + clean release nets
-                        // a small edge over gripping (drift = advantage, A/B measured 2026-08-07)
+  driftBleed: 0.04,     // sliding is nearly free — drift's edge is the rotation + line, not a boost
   scrub: 0.35,          // turning costs speed: fraction of killed sideways motion lost forward too
   cornerUse: 0.6,       // fraction of max grip the AI plans corners at -> real braking zones
   stability: 6.0,       // self-straightening when you're not steering
@@ -1997,19 +1996,9 @@ function stepCar(car, input, dt) {
     // (Domain Expansion: no more being pinned on a wall)
     else if (vf > -PHYS.reverseMax) aLong -= PHYS.reverseAccel * input.brake;
   }
-  // drifting COSTS speed now (rally rules) — the reward moved to the exit: hold a real
-  // slide, straighten out, release → traction snap. Release while still sideways = fizzle.
-  const slideNow = vDir0 - car.heading;   // post-governor slide, cheap wrap below
-  const slideAbs = Math.min(Math.abs(slideNow) > Math.PI ? 2 * Math.PI - Math.abs(slideNow) : Math.abs(slideNow), Math.PI);
-  if (input.handbrake && car.slip > 6 && speed > 10) car.driftT += dt;
-  else if (!input.handbrake) {
-    if (car.driftT > 0.3) car.boostT = Math.min(0.35 + car.driftT * 0.5, 1.3);
-    car.driftT = 0;
-  }
-  if (car.boostT > 0) {
-    if (vf > 2) aLong += 30 * Math.max(0, Math.cos(slideAbs * 1.1));   // aligned = full snap
-    car.boostT -= dt;
-  }
+  // NO boost mechanic (removed by decree 2026-08-07). Drift's advantage is honest:
+  // the slide is nearly free (low bleed) and the handbrake rotation buys the faster
+  // line through hairpins. No arcade snap on exit.
   aLong -= PHYS.drag * surf.dragMul * (PM ? PM.drag : 1) * vf * Math.abs(vf);
   aLong -= PHYS.rolling * Math.sign(vf) * Math.min(Math.abs(vf), 1);
   vf += aLong * dt;
@@ -2236,8 +2225,7 @@ function aiInputs(car) {
     }
   }
   if (raceTime < car.hbUntil) {
-    // release when rotated AND the charge is worth a boost — drifters hold the slide like players do
-    if (Math.abs(err) < 0.10 && car.driftT > 0.32) car.hbUntil = 0;
+    if (Math.abs(err) < 0.10) car.hbUntil = 0;              // rotated enough -> release, catch it
     else { handbrake = 1; steer = THREE.MathUtils.clamp(err * 4, -1, 1); throttle = 0.6; brake = 0; }
   }
 

@@ -131,7 +131,7 @@ window.NET = (() => {
   // ---------------------------------------------------------------- position stream
   let lastSend = 0;
   function sendNow() {
-    if (phase !== 'racing' || !chan || !window.player) return;
+    if (phase !== 'racing' || !chan || typeof player === 'undefined' || !player) return;
     const now = performance.now();
     if (now - lastSend < 1000 / HZ - 5) return;
     lastSend = now;
