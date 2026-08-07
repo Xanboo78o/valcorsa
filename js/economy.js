@@ -56,24 +56,28 @@ window.ECON = (() => {
     document.querySelectorAll('[data-corsas]').forEach(e => e.textContent = money());
   }
 
+  // The store is a STOREFRONT, not a settings menu: search up top, aisles you
+  // flick through, a grid of product cards with pictures and big prices.
   function shopHTML() {
+    const fi = f => window.PART_ICON ? PART_ICON({ fam: f }) : '';
     return `
-    <div class="panel shopPanel">
-      <h2>THE PARTS SHOP</h2>
-      <p class="garageSub">Balance: <b class="corsas">₡<span data-corsas>0</span></b> · winnings buy parts, parts win races</p>
-      <p class="setNote">— PARTSPACKS · pick your sponsor —</p>
-      <div id="sponsorRow">${SPONSORS.map(s => `
+    <div class="panel shopPanel storeFront">
+      <div id="storeHead">
+        <button id="storeClose" onclick="closeShop()">✕</button>
+        <b id="storeLogo">VALCORSA<span>parts</span></b>
+        <input id="partSearch" placeholder="Search everything…" autocomplete="off">
+        <b class="corsas">₡<span data-corsas>0</span></b>
+      </div>
+      <div id="aisleRow">${PART_FAMILIES.map(f =>
+        `<button data-fam="${f}">${fi(f)}<span>${f}</span></button>`).join('')}</div>
+      <div id="packShelf"><span class="dealTag">PARTSPACKS</span>${SPONSORS.map(s => `
         <button class="sponsorCard" data-sponsor="${s.id}">
           <b>${s.name}</b><span>${s.tag}</span><em>₡${s.cost}</em>
         </button>`).join('')}
       </div>
-      <p class="setNote">— THE CATALOGUE · every single part —</p>
-      <div id="famRow">${PART_FAMILIES.map(f => `<button data-fam="${f}">${f}</button>`).join('')}</div>
-      <input id="partSearch" placeholder="Search the catalogue…" autocomplete="off">
-      <div id="storeList"></div>
-      <p class="setNote">— YOUR SHELVES —</p>
+      <div id="storeGrid"></div>
+      <p class="setNote invHead">— YOUR SHELVES —</p>
       <div id="invList"></div>
-      <button class="closeSet" onclick="closeShop()">Done</button>
     </div>`;
   }
 
@@ -83,23 +87,23 @@ window.ECON = (() => {
     const my = inv(), cd = cards();
     const list = PARTS.filter(p => !p.legacy &&
       (q ? (p.name + p.brand + p.fam).toLowerCase().includes(q) : p.fam === curFam));
-    $$('storeList').innerHTML = list.slice(0, 60).map(p => {
-      const rm = RARITY_META[p.rarity];
+    $$('storeGrid').innerHTML = list.slice(0, 80).map(p => {
       const stats = Object.entries(p.stats).map(([k, v2]) => `${k} ${v2}`).join(' · ');
-      const isChassis = p.fam === 'Chassis';
       const owned = my[p.id] || 0;
       const cardN = cd[p.id] || 0;
-      const locked = isChassis && cardN < CARDS_NEEDED;
+      const locked = p.fam === 'Chassis' && cardN < CARDS_NEEDED;
       const buy = locked
-        ? `<span class="cardNeed">cards ${cardN}/${CARDS_NEEDED}</span>`
-        : `<button class="buyBtn" data-buy="${p.id}">${p.price ? '₡' + p.price : 'FREE'}</button>`;
-      return `<div class="partRow">
-        <span class="rarDot" style="background:${rm.color}"></span>
-        <div class="partInfo"><b>${p.brand} ${p.name}</b><small>${stats}${p.note ? ' — ' + p.note : ''}</small></div>
-        ${owned ? `<span class="ownedN">x${owned}</span>` : ''}${buy}
+        ? `<span class="cardNeed">CARDS ${cardN}/${CARDS_NEEDED}</span>`
+        : `<button class="buyBtn" data-buy="${p.id}">BUY</button>`;
+      return `<div class="prodCard r-${p.rarity}">
+        <div class="prodImg">${window.PART_ICON ? PART_ICON(p) : ''}${owned ? `<i class="prodOwned">×${owned}</i>` : ''}</div>
+        <b class="prodName">${p.name}</b>
+        <small class="prodBrand">${p.brand}</small>
+        <small class="prodNote">${stats || p.note || '&nbsp;'}</small>
+        <div class="prodBuy"><span class="prodPrice">${p.price ? '₡' + p.price : 'FREE'}</span>${buy}</div>
       </div>`;
-    }).join('') || '<p class="setNote">Nothing here matches.</p>';
-    $$('storeList').querySelectorAll('[data-buy]').forEach(b => b.onclick = () => buyPart(b.dataset.buy));
+    }).join('') || '<p class="setNote gridEmpty">Nothing here matches.</p>';
+    $$('storeGrid').querySelectorAll('[data-buy]').forEach(b => b.onclick = () => buyPart(b.dataset.buy));
   }
   function renderInv() {
     const my = inv(), cd = cards();

@@ -1611,3 +1611,88 @@ body.tabsOn #shopModal .shopPanel { max-height: calc(100dvh - 92px); margin-bott
   #gStationPanel { width: min(320px, 54vw); top: calc(44px + env(safe-area-inset-top)); }
   #gStationBar button { font-size: 8.5px; padding: 6px 8px; }
 }
+
+/* ═══ V19 THE STOREFRONT — the Parts Shop is a store, not a settings menu.
+   Light product tiles on dark glass, aisles you flick through, big prices,
+   one BUY per card. Sticker-cut rules apply. ═══ */
+.storeFront { width: min(860px, 96vw); padding: 0 0 18px; overflow-x: hidden; }
+#storeHead {
+  position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; background: rgba(5,10,22,.97);
+  border-bottom: 1.5px solid var(--st-blue);
+}
+#storeClose { min-width: 0 !important; width: 36px; height: 36px; padding: 0 !important;
+  font-size: 15px; flex: none; }
+#storeLogo { font-family: 'Archivo Black', sans-serif; font-size: 16px; color: var(--st-text);
+  letter-spacing: .5px; white-space: nowrap; }
+#storeLogo span { color: var(--st-orange-hot); font-family: 'Poppins', sans-serif; font-weight: 700;
+  font-style: italic; margin-left: 1px; }
+#partSearch { flex: 1; min-width: 80px; margin: 0; }
+#storeHead .corsas { font-size: 15px; white-space: nowrap; }
+#aisleRow {
+  display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px 4px; scrollbar-width: none;
+}
+#aisleRow::-webkit-scrollbar { display: none; }
+#aisleRow button {
+  flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 62px !important; padding: 8px 10px 6px;
+  background: rgba(8,14,30,.7); border: 1.5px solid rgba(46,107,255,.3); border-radius: 0;
+  color: #8fa8e8;
+}
+#aisleRow button svg { width: 20px; height: 20px; }
+#aisleRow button span { font-size: 8.5px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+#aisleRow button.sel { color: var(--st-orange-hot); border-color: var(--st-orange);
+  background: rgba(255,140,26,.08); box-shadow: 0 0 8px rgba(255,140,26,.3); }
+#packShelf { display: flex; gap: 8px; overflow-x: auto; align-items: stretch;
+  padding: 8px 14px; scrollbar-width: none; }
+#packShelf::-webkit-scrollbar { display: none; }
+#packShelf .dealTag { writing-mode: vertical-rl; transform: rotate(180deg); flex: none;
+  font-family: 'Archivo Black', sans-serif; font-size: 9px; letter-spacing: 2px;
+  color: var(--st-orange); text-align: center; }
+#packShelf .sponsorCard { flex: none; min-width: 148px; padding: 8px 12px; }
+#storeGrid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px; padding: 10px 14px;
+}
+.prodCard { display: flex; flex-direction: column; gap: 2px;
+  background: var(--st-glass2); border: 1.5px solid rgba(46,107,255,.3); border-radius: 0;
+  padding: 8px; transition: box-shadow .15s, border-color .15s; }
+.prodCard:hover { border-color: var(--st-blue-hot); box-shadow: 0 0 14px rgba(46,107,255,.3); }
+.prodImg { position: relative; height: 84px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(180deg, #eef2fa, #d9e1f2); border-radius: 0; color: #2c3a5c;
+  margin-bottom: 5px; }
+.prodImg svg { width: 52px; height: 52px; filter: drop-shadow(0 2px 2px rgba(20,30,60,.25)); }
+.prodOwned { position: absolute; top: 4px; right: 4px; font-style: normal; font-size: 9.5px;
+  font-weight: 800; background: var(--st-blue); color: #fff; padding: 2px 6px; }
+.r-solid .prodImg { box-shadow: inset 0 0 0 2px rgba(46,107,255,.5); }
+.r-rare .prodImg { box-shadow: inset 0 0 0 2px var(--st-orange); }
+.r-legendary .prodImg { box-shadow: inset 0 0 0 2.5px #fff, 0 0 14px rgba(255,140,26,.5);
+  background: linear-gradient(180deg, #fff3e2, #ffd9a8); color: #7a4200; }
+.prodName { font-size: 12px; color: var(--st-text); line-height: 1.25; min-height: 30px; }
+.prodBrand { font-size: 9.5px; color: #8fa8e8; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+.prodNote { font-size: 9px; color: #7d92c9; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.prodBuy { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 5px; }
+.prodPrice { font-family: 'Archivo Black', sans-serif; font-size: 15px; color: var(--st-orange-hot); }
+.prodCard .buyBtn {
+  background: linear-gradient(180deg, var(--st-orange-hot), var(--st-orange)) !important;
+  border: none; color: #1d0e00; font-weight: 800; font-size: 11px; letter-spacing: 1px;
+  padding: 6px 14px; border-radius: 0; box-shadow: 0 2px 0 #b35c00;
+}
+.prodCard .buyBtn:active { transform: translateY(1px); box-shadow: 0 1px 0 #b35c00; }
+.prodCard .cardNeed { font-size: 9px; }
+.invHead { padding: 8px 14px 0; }
+#invList { padding: 0 14px; }
+.gridEmpty { padding: 16px; grid-column: 1 / -1; text-align: center; }
+body.tabsOn #shopModal .storeFront { max-height: calc(100dvh - 92px); margin-bottom: 66px; }
+@media (max-width: 700px) {
+  #storeGrid { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 7px; padding: 8px 10px; }
+  .prodImg { height: 68px; }
+  .prodImg svg { width: 42px; height: 42px; }
+  #storeLogo { display: none; }   /* phones: search + balance own the header */
+}
+/* the garage doors teach the loop in one line */
+.gLoopHint { font-family: 'Archivo Black', sans-serif; font-size: 10px; letter-spacing: 1.5px;
+  color: var(--st-blue-hot); margin: 4px 0 10px; text-shadow: 0 0 8px rgba(46,107,255,.4); }
+/* the panel is a scrolling flex column — children must never squash to fit */
+.storeFront > * { flex-shrink: 0; }
+.storeFront button { min-width: 0 !important; }

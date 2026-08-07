@@ -165,7 +165,8 @@ window.GARAGE3D = (() => {
         any = true;
         html += `<p class="gKind">${kindLabel[k]}</p>` + owned.map(p => grabRow(p, my)).join('');
       }
-      if (!any) html += `<p class="gEmpty">nothing here yet — the Parts Shop sells the ${name === 'shelf' ? 'engine stack' : 'hardware'}</p>`;
+      if (!any) html += `<p class="gEmpty">nothing here yet — the Parts Shop sells the ${name === 'shelf' ? 'engine stack' : 'hardware'}</p>
+        <button class="gAction hero" id="gShopCta">OPEN THE PARTS SHOP</button>`;
     } else if (name === 'legacy') {
       const relics = JSON.parse(localStorage.getItem('vc_legacy') || '[]');
       html = `<h3>THE SHELF</h3><p class="gKind">PRE-STANDARD ERA</p>` +
@@ -176,6 +177,8 @@ window.GARAGE3D = (() => {
     else { pan.classList.remove('open'); return; }
     pan.innerHTML = html;
     pan.classList.add('open');
+    const cta = pan.querySelector('#gShopCta');   // straight line from empty shelf to the store
+    if (cta) cta.onclick = () => { close(); window.closeGarage(); setTimeout(() => window.vcTab && vcTab('shop'), 180); };
     pan.querySelectorAll('[data-grab]').forEach(b => b.onclick = () => {
       const id = b.dataset.grab, s = armful.find(x => x.id === id);
       if (s) s.n++; else armful.push({ id, n: 1 });
@@ -228,8 +231,10 @@ window.GARAGE3D = (() => {
       const s = EM().compute(partial);
       spec = `<div class="gSpec"><b>${s.designation}</b> · ~${s.vp} vp · ${s.mass} kg · heat ${s.heat} · rel ${s.rel}${ready ? '' : ' <i>(projected)</i>'}</div>`;
     }
+    const nothingStaged = !armful.length && bins.every(b => !b);
     pan.innerHTML = `<h3>WORKBENCH</h3>
       <div class="gBins">${binHtml}</div>
+      ${nothingStaged ? `<button id="gGoShelf" class="gAction">BINS ARE EMPTY — GRAB PARTS AT THE SHELF</button>` : ''}
       ${armful.length ? `<button id="gLoad" class="gAction">LOAD BINS (${armfulN()} in the armful)</button>` : ''}
       <div class="gSlots">${slotHtml}</div>${spec}
       ${ready ? `<input id="gEngName" maxlength="16" placeholder="Name this engine…" autocomplete="off">
@@ -237,6 +242,7 @@ window.GARAGE3D = (() => {
     pan.classList.add('open');
 
     if ($('gLoad')) $('gLoad').onclick = loadBins;
+    if ($('gGoShelf')) $('gGoShelf').onclick = () => goTo('shelf');
     pan.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => fillSlot(b.dataset.slot));
     if ($('gStamp')) $('gStamp').onclick = stamp;
   }
