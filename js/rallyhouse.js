@@ -11,6 +11,14 @@
     { f: 'music/heiligen-coast.mp3',     t: 'Heiligen Coast' },
     { f: 'music/granada-sprint.mp3',     t: 'Granada Sprint' },
     { f: 'music/bahia-lluvia.mp3',       t: 'Bahía Lluvia' },
+    { f: 'music/honor-among-engines.mp3',t: 'Honor Among Engines' },
+    { f: 'music/table.mp3',              t: 'Table' },
+    { f: 'music/mice-with-wheels.mp3',   t: 'Mice with Wheels' },
+    { f: 'music/trackswing.mp3',         t: 'Trackswing' },
+    { f: 'music/cabination.mp3',         t: 'Cabination' },
+    { f: 'music/electro-sink.mp3',       t: 'Electro Sink' },
+    { f: 'music/fluxxhinge.mp3',         t: 'Fluxxhinge' },
+    { f: 'music/basil78.mp3',            t: 'Basil78' },
   ];
   const MENU = { f: 'music/home-of-racing.mp3', t: 'Home of Racing' };
 

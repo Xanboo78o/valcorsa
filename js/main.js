@@ -46,8 +46,12 @@ const PHYS = {
   aLatMax: 64,          // high grip -> planted, forgiving (arcade F1)
   steerOver: 1.08,      // little slack past grip -> predictable, few spins
   downforce: 0.16,      // grip gain per (u/s), sticks at speed
-  handbrakeGrip: 0.18,  // rear grip multiplier while handbraking (way loose -> big swings)
+  handbrakeGrip: 0.38,  // rear grip while handbraking: loose enough to swing, enough to CARVE the arc
   hbYaw: 2.2,           // extra yaw authority while handbraking, rad/s at full steer + speed
+  slideCap: 0.66,       // ~38°: tires saturate — the nose physically cannot rotate past the travel
+                        // direction by more than this while drifting (was unbounded: nose spun 180°
+                        // past the velocity and the car "accelerated backward")
+  driftBleed: 0.55,     // sliding rubber burns speed: /s fraction of lateral speed bled from forward
   scrub: 0.35,          // turning costs speed: fraction of killed sideways motion lost forward too
   cornerUse: 0.6,       // fraction of max grip the AI plans corners at -> real braking zones
   stability: 6.0,       // self-straightening when you're not steering
@@ -1964,7 +1968,17 @@ function stepCar(car, input, dt) {
   // handbrake + steer = active rear swing: raw steer input (not the smoothed wheel) so it snaps
   if (input.handbrake && speed > 3)
     yaw += PHYS.hbYaw * THREE.MathUtils.clamp(input.steer, -1, 1) * Math.min(speed / 16, 1);
+  const vDir0 = speed > 6 ? Math.atan2(car.velX, car.velZ) : car.heading;   // travel direction pre-yaw
   car.heading += yaw * dt;
+  // slide governor (drift only): tires saturate ~38° — the nose snaps out and HOLDS there,
+  // a rally angle you can sit on, instead of pirouetting past the velocity vector.
+  if (input.handbrake && speed > 6) {
+    let sg = vDir0 - car.heading;
+    while (sg > Math.PI) sg -= 2 * Math.PI;
+    while (sg < -Math.PI) sg += 2 * Math.PI;
+    if (sg > PHYS.slideCap) car.heading = vDir0 - PHYS.slideCap;
+    else if (sg < -PHYS.slideCap) car.heading = vDir0 + PHYS.slideCap;
+  }
 
   const fX = Math.sin(car.heading), fZ = Math.cos(car.heading);
   const rX = fZ, rZ = -fX;
@@ -1982,15 +1996,19 @@ function stepCar(car, input, dt) {
     else if (!car.isPlayer && vf > -PHYS.reverseMax) aLong -= PHYS.reverseAccel * input.brake;
     else if (car.isPlayer && vf > 0) aLong -= PHYS.brakeAccel * input.brake * 0.5;  // ease the last bit to a stop
   }
-  // gassed-up: drifting never slows you — a little thrust while sliding on the throttle,
-  // and holding a real slide charges a mini-boost that kicks on release (MK-style reward)
-  if (input.handbrake && vf > 0.5) aLong += input.throttle * 5;
+  // drifting COSTS speed now (rally rules) — the reward moved to the exit: hold a real
+  // slide, straighten out, release → traction snap. Release while still sideways = fizzle.
+  const slideNow = vDir0 - car.heading;   // post-governor slide, cheap wrap below
+  const slideAbs = Math.min(Math.abs(slideNow) > Math.PI ? 2 * Math.PI - Math.abs(slideNow) : Math.abs(slideNow), Math.PI);
   if (input.handbrake && car.slip > 6 && speed > 10) car.driftT += dt;
   else if (!input.handbrake) {
-    if (car.driftT > 0.35) car.boostT = Math.min(0.35 + car.driftT * 0.5, 1.1);
+    if (car.driftT > 0.5) car.boostT = Math.min(0.25 + car.driftT * 0.35, 0.7);
     car.driftT = 0;
   }
-  if (car.boostT > 0) { aLong += 24; car.boostT -= dt; }
+  if (car.boostT > 0) {
+    if (vf > 2) aLong += 20 * Math.max(0, Math.cos(slideAbs * 1.5));   // aligned = full snap
+    car.boostT -= dt;
+  }
   aLong -= PHYS.drag * surf.dragMul * (PM ? PM.drag : 1) * vf * Math.abs(vf);
   aLong -= PHYS.rolling * Math.sign(vf) * Math.min(Math.abs(vf), 1);
   vf += aLong * dt;
@@ -1999,8 +2017,12 @@ function stepCar(car, input, dt) {
   const latReduce = Math.min(Math.abs(vl), aLat * dt);
   vl -= Math.sign(vl) * latReduce;
   // tire scrub: the grip spent killing sideways motion drags the car back too — turning hard
-  // costs speed. A handbrake slide barely scrubs (low rear grip), so a clean drift keeps pace.
+  // costs speed.
   vf -= Math.sign(vf) * Math.min(Math.abs(vf), latReduce * PHYS.scrub);
+  // sliding rubber burns speed: the bigger the slide, the harder the bleed (the drift debuff —
+  // you drift for the line and the clip, not for free pace)
+  if (input.handbrake)
+    vf -= Math.sign(vf) * Math.min(Math.abs(vf), Math.abs(vl) * PHYS.driftBleed * dt);
   // stability assist: bleed off slide when you're not actively steering (catches spins)
   if (!input.handbrake) {
     const straighten = PHYS.stability * (1 - Math.min(Math.abs(input.steer), 1)) * dt;
