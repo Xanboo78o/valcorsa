@@ -160,7 +160,7 @@ const TRACKS = [
     laps: 6,
     walls: true,
     draftMul: 1.4,
-    wind: { x: 0.6, z: -2.6 },                       // off the sea, always
+    wind: { x: 1.1, z: -3.2 },                       // off the sea, always
     clans: [
       { name: 'Braewick', color: 0x2b5fd0 },         // the cliff village races blue
       { name: 'Seawick',  color: 0xd0452b },         // the harbor village races red
