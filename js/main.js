@@ -2006,6 +2006,9 @@ function stepCar(car, input, dt) {
   let aLong = 0;
   if (input.throttle > 0) {
     aLong += PHYS.engineAccel * (car.engineMul || 1) * (PM ? PM.accel : 1) * paceMul * input.throttle * surf.accelMul;
+    // slipstream: tuck behind a kart and the hole in the air pulls you along.
+    // def.draftMul cranks it at Circuit venues — the pack never lets go.
+    if (car._draft) aLong += car._draft * Math.min(input.throttle, 1);
   }
   if (input.brake > 0) {
     if (vf > 1.5) aLong -= PHYS.brakeAccel * (PM ? PM.brake : 1) * input.brake * Math.min(surf.grip * 1.4, 1);
@@ -3363,6 +3366,20 @@ function loop() {
           input = aiInputs(car); input.throttle = Math.min(input.throttle, 0.4);
         } else {
           input = aiInputs(car);
+        }
+        // slipstream tow: measured against the field each substep (O(n^2), n=12)
+        car._draft = 0;
+        if (!track.open && Math.hypot(car.velX, car.velZ) > 18) {
+          const fX2 = Math.sin(car.heading), fZ2 = Math.cos(car.heading);
+          for (const c2 of cars) {
+            if (c2 === car || c2.dnf) continue;
+            const rx = c2.x - car.x, rz = c2.z - car.z;
+            const ahead = rx * fX2 + rz * fZ2;
+            if (ahead < 4 || ahead > 26) continue;
+            const side = Math.abs(rx * fZ2 - rz * fX2);
+            if (side > 3.5) continue;
+            car._draft = Math.max(car._draft, (1 - ahead / 26) * 9 * (track.def.draftMul || 1));
+          }
         }
         if (window.DMG) input = DMG.modInput(car, input, sub);          // damage speaks through the controls
         if (car.air) input = { ...input, steer: input.steer * 0.25 };   // limited authority mid-glide

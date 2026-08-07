@@ -55,7 +55,24 @@
     _curve = g;
     return _curve;
   }
-  const GEO = { c: cubeGeo, w: wedgeGeo, q: curveGeo };
+  let _arch = null;
+  function archGeo() {                        // fender block: slab with a semicircular wheel well.
+    if (_arch) return _arch;                  // origin sits AT THE AXLE: place it at the wheel center.
+    const s = new THREE.Shape();
+    s.moveTo(-0.55, 0);
+    s.lineTo(-0.44, 0);
+    s.absarc(0, 0, 0.44, Math.PI, 0, true);   // the well
+    s.lineTo(0.55, 0);
+    s.lineTo(0.55, 0.62);
+    s.lineTo(-0.55, 0.62);
+    s.closePath();
+    const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false, curveSegments: 7 });
+    g.translate(0, 0, -0.5);
+    g.rotateY(Math.PI / 2);                   // width along X; profile runs along Z (car length)
+    _arch = g;
+    return _arch;
+  }
+  const GEO = { c: cubeGeo, w: wedgeGeo, q: curveGeo, a: archGeo };
 
   /* weld(): blocks -> one mesh per material. block = [type, mat, x, y, z, sx, sy, sz, ry, rz]
      type: c cube / w wedge / q curve · ry/rz in quarter-turns (0-3). */
@@ -91,24 +108,31 @@
   // ---- the seven, re-authored in blocks (wheels arrays: verbatim from the originals) ----
   const B = {};
 
-  B.gt = () => ({                             // Enginos GT: low coupe, curve nose, fastback wedge
+  B.gt = () => ({                             // Enginos GT v2: one big rectangle, sculpted —
+    // super subtle hood angle, ONE obvious curve (the seat-hump fastback), wrapped wheels.
     wheels: [[-0.76, 1.5, 1, 0.36, 0.28], [0.76, 1.5, 1, 0.36, 0.28], [-0.76, -1.5, 0, 0.37, 0.3], [0.76, -1.5, 0, 0.37, 0.3]],
     build(g, mats) {
       weld(g, mats, [
-        ['c', 'paint', 0, 0.46, 0.1, 1.52, 0.36, 3.5],             // floor slab
-        ['c', 'paint', 0, 0.78, 1.05, 1.52, 0.3, 1.15],            // hood
-        ['q', 'paint', 0, 0.78, 1.75, 1.52, 0.3, 0.34, 0, 0],      // nose curve
-        ['w', 'glass', 0, 1.09, 0.42, 1.36, 0.34, 0.62],           // windshield wedge
-        ['c', 'paint', 0, 1.09, -0.25, 1.4, 0.34, 0.72],           // cabin
-        ['q', 'paint', 0, 1.09, -0.83, 1.4, 0.34, 0.5, 2, 0],      // roof curve down to deck
-        ['c', 'paint', 0, 0.78, -1.35, 1.52, 0.3, 0.9],            // tail deck
-        ['c', 'dark', 0, 0.62, -1.82, 1.3, 0.12, 0.14],            // diffuser lip
-        ['c', 'dark', 0, 0.98, -1.78, 1.44, 0.07, 0.3],            // ducktail
+        ['c', 'dark', 0, 0.3, 0, 1.44, 0.16, 3.6],                 // inset rocker layer (panel line)
+        ['c', 'paint', 0, 0.58, 0, 1.52, 0.4, 3.9],                // THE big rectangle
+        ['w', 'paint', 0, 0.87, 1.17, 1.52, 0.18, 1.55],           // hood: super subtle angle (long, low)
+        ['c', 'paint', 0, 0.82, 1.93, 1.52, 0.13, 0.24],           // nose cap over the lights
+        ['w', 'glass', 0, 1.06, 0.42, 1.34, 0.36, 0.7],            // windshield: steeper family
+        ['c', 'paint', 0, 1.06, -0.22, 1.4, 0.36, 0.62],           // roof over the seats
+        ['q', 'paint', 0, 1.02, -0.78, 1.4, 0.44, 0.6, 2, 0],      // THE curve: seat-hump fastback
+        ['q', 'paint', 0, 0.84, -1.35, 1.52, 0.26, 0.55, 2, 0],    // second curve step down the deck
+        ['c', 'dark', 0, 0.9, -1.82, 1.46, 0.06, 0.26],            // ducktail blade
+        ['c', 'dark', 0, 0.42, -1.94, 1.34, 0.14, 0.12],           // diffuser
+        // wheel wells: fenders wrap all four, a whisker wider than the body
+        ['a', 'paint', -0.76, 0.37, 1.5, 0.36, 0.92, 0.92],
+        ['a', 'paint', 0.76, 0.37, 1.5, 0.36, 0.92, 0.92],
+        ['a', 'paint', -0.76, 0.38, -1.5, 0.38, 0.95, 0.95],
+        ['a', 'paint', 0.76, 0.38, -1.5, 0.38, 0.95, 0.95],
       ]);
-      mirrors(g, mats, 0.78, 1.02, 0.72);
-      exhausts(g, mats, [-0.3, 0.3], 0.42, -1.82);
-      lampBar(g, mats, 'head', 1.9, 0.72, 1.1, 0.1);
-      lampBar(g, mats, 'tail', -1.83, 0.86, 1.2, 0.09);
+      mirrors(g, mats, 0.8, 1.0, 0.72);
+      exhausts(g, mats, [-0.3, 0.3], 0.4, -1.96);
+      lampBar(g, mats, 'head', 1.98, 0.66, 1.15, 0.09);
+      lampBar(g, mats, 'tail', -1.96, 0.74, 1.25, 0.09);
     },
   });
 

@@ -148,6 +148,35 @@ const TRACKS = [
     ],
   },
   {
+    // FORGE 2 of 32 — 10-Q session. The bullfight: CIRCUIT mode's heartland.
+    // Portuguese south coast (the nation speaks seven tongues now — Adam's law).
+    id: 'trestouros',
+    name: 'Três Touros',
+    mode: 'CIRCUIT',
+    desc: '"The bullfight." A walled tri-oval with the strongest tow in the nation — nobody escapes the pack. Eight laps, three bulls, and A Marrada waiting at the end.',
+    width: 26,
+    hills: 0,
+    surface: 'asphalt',
+    env: 'countryside',
+    laps: 8,
+    walls: true,
+    draftMul: 1.9,                                   // the cranked slipstream IS the venue
+    points: [
+      // main straight (the grid, bull statues someday) — north edge, running east
+      [-160, 250, 0], [0, 258, 0], [160, 250, 0],
+      // TORO UM — sweeping right onto the southeast leg
+      [252, 214, 0], [300, 140, 0], [302, 60, 0],
+      // southeast straight
+      [260, -40, 0], [200, -140, 0],
+      // TORO DOIS — the flat hook west
+      [140, -216, 0], [40, -248, 0], [-70, -240, 0],
+      // southwest straight
+      [-170, -190, 0], [-250, -110, 0],
+      // A MARRADA — the wide banked final sweeper: races end here, sometimes karts too
+      [-300, -10, 1], [-306, 90, 2], [-262, 186, 1],
+    ],
+  },
+  {
     id: 'granada',
     name: 'Granada Town Sprint',
     mode: 'SPEEDKART',
