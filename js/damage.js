@@ -85,9 +85,11 @@
     let { throttle, steer } = input;
     const speed = Math.hypot(car.velX, car.velZ);
 
-    // drift wear: racing tires object to being dragged sideways all day (forgiving rate)
+    // drift wear: racing tires object to being dragged sideways all day (forgiving rate).
+    // The tire's WEAR stat finally matters: tough compounds last longer, softs die young.
     if (input.handbrake && speed > 18) {
-      d.wear += dt / 40;
+      const tw = (car.isPlayer && window.ECON && ECON.mods) ? (ECON.mods().tireWear ?? 6) : 6;
+      d.wear += dt / (17 + tw * 3.8);
       if (d.wear >= 1 && !d.flat) goFlat(car);
     }
     // over-rev heat: nearly extinct by decree — you'd need ~45s of continuous absolute

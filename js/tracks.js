@@ -148,6 +148,38 @@ const TRACKS = [
     ],
   },
   {
+    // FORGE 4 of 32 — 10-Q session. The Scottish cliff coast: the old feud.
+    id: 'theskirl',
+    name: 'The Skirl',
+    mode: 'CIRCUIT',
+    desc: 'Braewick and Seawick have hated each other for 200 years, and every race is the derby. Stone corridors, permanent wind, and Widow\'s Wall between the pack and the 60-meter drop.',
+    width: 24,
+    hills: 0.35,
+    surface: 'asphalt',
+    env: 'meadow',
+    laps: 6,
+    walls: true,
+    draftMul: 1.4,
+    wind: { x: 0.6, z: -2.6 },                       // off the sea, always
+    clans: [
+      { name: 'Braewick', color: 0x2b5fd0 },         // the cliff village races blue
+      { name: 'Seawick',  color: 0xd0452b },         // the harbor village races red
+    ],
+    points: [
+      // WIDOW'S WALL — the cliff-edge run, sea to the north, the drop beyond the stones
+      [0, 0, 26], [160, -8, 27], [320, 0, 26],
+      // inland through the first stone corridor
+      [400, -60, 24], [380, -160, 18], [300, -220, 14], [340, -320, 10],
+      // Braewick esses
+      [260, -380, 8], [160, -350, 7], [80, -400, 6],
+      // the low turn at the burn
+      [-40, -380, 5],
+      // the climb home through Seawick's walls
+      [-120, -300, 10], [-100, -190, 16], [-180, -120, 20], [-140, -30, 24],
+      [-60, 10, 26],
+    ],
+  },
+  {
     // FORGE 2 of 32 — 10-Q session. The bullfight: CIRCUIT mode's heartland.
     // Portuguese south coast (the nation speaks seven tongues now — Adam's law).
     id: 'trestouros',

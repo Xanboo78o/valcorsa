@@ -2045,6 +2045,12 @@ function stepCar(car, input, dt) {
   car.velZ = fZ * vf + rZ * vl;
   if (speed < 0.4 && input.throttle === 0 && input.brake === 0) { car.velX = 0; car.velZ = 0; }
 
+  // coastal wind (The Skirl): a hand on every kart, gusting, never gone
+  if (!track.open && track.def && track.def.wind) {
+    const g = 0.65 + 0.35 * Math.sin(raceTime * 0.7 + car.x * 0.01);
+    car.velX += track.def.wind.x * g * dt;
+    car.velZ += track.def.wind.z * g * dt;
+  }
   car.x += car.velX * dt;
   car.z += car.velZ * dt;
 
@@ -2391,11 +2397,14 @@ function startGame(def, m) {
   for (let i = 0; i < nAI; i++) {
     const key = roster[i], P = PERSONAS[key], isV = key === 'versta';
     const name = isV ? 'El Santo' : AI_NAMES[i % AI_NAMES.length];
-    const color = isV ? 0xff7a1a : CAR_COLORS[(i + 1) % CAR_COLORS.length];
+    // feud venues (The Skirl): the locals race in village clan colors
+    const clan = !isV && def.clans ? def.clans[i % def.clans.length] : null;
+    const color = isV ? 0xff7a1a : clan ? clan.color : CAR_COLORS[(i + 1) % CAR_COLORS.length];
     const helmet = isV ? 0x14274a : HELMET_COLORS[(i + 1) % HELMET_COLORS.length];
     const veh = isV ? 'f1' : VEHICLES[Math.floor(Math.random() * VEHICLES.length)];
     const c = makeCar(color, false, name, helmet, veh);
     c.persona = key;
+    if (clan) c.clan = clan.name;
     // form jitter: two bots of the same tier are never equals — this alone splits them by
     // seconds over a race, and with the tier gaps it strings the whole field out
     const form = 0.965 + Math.random() * 0.07;

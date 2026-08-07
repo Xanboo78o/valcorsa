@@ -128,14 +128,28 @@
       (kind === 'head' ? headMats : tailMats).push(mat);
       add(new THREE.BoxGeometry(w, h, 0.06), mat, x, y, z);
     };
+    // wheel STYLES are visible now: hub size/color per style + deep-dish ring
+    // 0 sport silver · 1 classic big cream · 2 gold deep-dish · 3 steelies · 4 neon
+    const HUBR = [0.55, 0.66, 0.5, 0.4, 0.6];
     const wheel = (x, z, front, r = 0.45, width = 0.44) => {
       const wg = new THREE.Group();
       const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, width, 12), dark);
       w.rotation.z = Math.PI / 2; w.castShadow = true;
       wg.add(w);
-      const hb = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.55, width + 0.02, 10), hub);
+      const hr = HUBR[wIdx] ?? 0.55;
+      const hb = new THREE.Mesh(new THREE.CylinderGeometry(r * hr, r * hr, width + 0.02, wIdx === 3 ? 8 : 10), hub);
       hb.rotation.z = Math.PI / 2;
       w.add(hb);
+      if (wIdx === 2) {                                            // deep-dish: cream outer ring
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.72, 0.045, 6, 14), toonMat(0xf4ecdd));
+        ring.rotation.y = Math.PI / 2;
+        w.add(ring);
+      }
+      if (wIdx === 1) {                                            // classic: center cap
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.2, r * 0.2, width + 0.06, 8), dark);
+        cap.rotation.z = Math.PI / 2;
+        w.add(cap);
+      }
       wg.position.set(x, r, z);
       wg.userData.front = !!front;
       g.add(wg); wheels.push(wg);
@@ -145,6 +159,77 @@
       add(new THREE.BoxGeometry(0.5, 0.6, 0.42), dark, 0, 0.62, z, lean || 0);
       add(new THREE.SphereGeometry(0.28, 10, 8), helmetMat, 0, 1.0, z + (lean ? 0.18 : 0));
     };
+
+    // ---- DECALS, finally real: canvas plates stuck on the body like stickers ----
+    const num = kit.num || ((kit.paint * 37 + 13) % 89) + 1;
+    function decalTex(kind) {
+      const cv = document.createElement('canvas');
+      cv.width = 256; cv.height = 128;
+      const c = cv.getContext('2d');
+      if (kind === 'number') {
+        c.fillStyle = '#f4ecdd'; c.beginPath(); c.arc(128, 64, 56, 0, 7); c.fill();
+        c.lineWidth = 7; c.strokeStyle = '#1c1e22'; c.stroke();
+        c.fillStyle = '#1c1e22'; c.font = '900 64px "Archivo Black", sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(num, 128, 68);
+      } else if (kind === 'stripes') {
+        c.fillStyle = '#f4ecdd';
+        c.fillRect(88, 0, 32, 128); c.fillRect(136, 0, 32, 128);
+      } else if (kind === 'flames') {
+        c.fillStyle = '#ff8c1a';
+        for (let i = 0; i < 5; i++) {
+          c.beginPath();
+          c.moveTo(20 + i * 46, 118); c.lineTo(43 + i * 46, 10 + (i % 2) * 26); c.lineTo(66 + i * 46, 118);
+          c.closePath(); c.fill();
+        }
+        c.fillStyle = '#ffd23e';
+        for (let i = 0; i < 5; i++) {
+          c.beginPath();
+          c.moveTo(32 + i * 46, 118); c.lineTo(43 + i * 46, 52 + (i % 2) * 20); c.lineTo(54 + i * 46, 118);
+          c.closePath(); c.fill();
+        }
+      } else if (kind === 'checker') {
+        for (let x = 0; x < 8; x++) for (let y = 0; y < 4; y++) {
+          c.fillStyle = (x + y) % 2 ? '#1c1e22' : '#f4ecdd';
+          c.fillRect(x * 32, y * 32, 32, 32);
+        }
+      } else return null;
+      const tx = new THREE.CanvasTexture(cv);
+      tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 4;
+      return tx;
+    }
+    function plate(tex, w, h, x, y, z, face) {          // face: 'left'|'right'|'up'
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 }));
+      m.position.set(x, y, z);
+      if (face === 'right') m.rotation.y = Math.PI / 2;
+      else if (face === 'left') m.rotation.y = -Math.PI / 2;
+      else if (face === 'up') { m.rotation.x = -Math.PI / 2; m.rotation.z = Math.PI; m.rotation.z = 0; }
+      g.add(m);
+      return m;
+    }
+    function applyDecals(vehId) {
+      const kind = kit.decal && kit.decal !== 'none' ? kit.decal : null;
+      if (!kind) return;
+      const tex = decalTex(kind === 'stripes' || kind === 'checker' ? kind : 'number');
+      const art = decalTex(kind);                        // flames/stripes/checker art for the roof/hood
+      if (!tex && !art) return;
+      const D = {
+        coupe:   { side: [0.966, 0.72, 0.1, 1.15, 0.42], top: [0, 1.415, -0.42, 1.15, 0.9] },
+        muscle:  { side: [1.015, 0.72, 0.2, 1.3, 0.46], top: [0, 1.462, -0.55, 1.15, 1.0] },
+        rally:   { side: [0.965, 0.78, 0.15, 1.1, 0.5], top: [0, 1.588, -0.2, 1.2, 1.05] },
+        monster: { side: [0.92, 2.06, -0.32, 0.95, 0.42], top: [0, 2.19, 1.05, 1.35, 1.15] },
+        kart:    { top: [0, 0.55, -0.18, 0.55, 0.5] },
+        f1:      { side: [1.24, 0.46, -0.5, 0.85, 0.32], top: [0, 0.585, 2.1, 0.5, 0.85] },
+        bike:    { side: [0.2, 0.94, 0.15, 0.42, 0.26] },
+      }[vehId];
+      if (!D) return;
+      if (D.side && tex) {
+        plate(tex, D.side[3], D.side[4], D.side[0], D.side[1], D.side[2], 'right');
+        plate(tex, D.side[3], D.side[4], -D.side[0], D.side[1], D.side[2], 'left');
+      }
+      if (D.top && art) plate(art, D.top[3], D.top[4], D.top[0], D.top[1], D.top[2], 'up');
+    }
 
     if (vehicle === 'coupe') {                // Enginos GT: the big rectangle, sculpted
       weld(g, M, [
@@ -295,6 +380,7 @@
       wheel(-1.02, 1.55, 1); wheel(1.02, 1.55, 1);
       wheel(-1.06, -1.55, 0); wheel(1.06, -1.55, 0);
     }
+    applyDecals(vehicle);
     return wheels;
   };
 })();

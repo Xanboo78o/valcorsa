@@ -221,11 +221,26 @@ window.ECON = (() => {
     };
     const e = st('Engine'), t = st('Tires');
     const b = STOCK_STATS.Brakes, a = STOCK_STATS.Aero;   // Engineer Garage territory — always stock here
+    // tire personality is REAL now: Wet Tread claws back most of the rain penalty
+    // (and gives a little up in the dry); knobbies do the same for dirt. Physics reads
+    // PM.grip per frame, so a getter makes tires weather/surface-aware with zero main.js edits.
+    const tp = (() => { const id = parts && parts.Tires; const p = id && PARTS.find(x => x.id === id); return p ? p.name : ''; })();
+    const isWet = /wet/i.test(tp), isKnob = /knobby|gravel/i.test(tp);
+    const dryGrip = cl(0.9 + (t.grip ?? 6) * 0.018 + (a.downforce ?? 0) * 0.004, 0.92, 1.12);
     return {
       accel: cl(0.82 + (e.power ?? 55) / 280, 0.9, 1.14),
-      grip:  cl(0.9 + (t.grip ?? 6) * 0.018 + (a.downforce ?? 0) * 0.004, 0.92, 1.12),
+      get grip() {
+        const gm = (typeof WEATHER !== 'undefined' && WEATHER.gripMul) || 1;
+        if (isWet) {
+          if (gm < 0.985) return dryGrip * (1 + (1 - gm) * 0.75 / gm);   // rain: recover 75% of the penalty
+          return dryGrip * 0.985;                                        // dry: wets give a little up
+        }
+        return dryGrip;
+      },
       brake: cl(0.9 + (b.stop ?? 6) * 0.02, 0.92, 1.1),
       drag:  cl(1 + ((a.drag ?? 3) - 3) * 0.012, 0.95, 1.08),
+      tireWear: t.wear ?? 6,                              // damage.js: tougher tires shrug off drift wear
+      dirtTire: isKnob,
     };
   }
   function mods() {   // physics reads THIS: the active livery kart's build
