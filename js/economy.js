@@ -56,6 +56,22 @@ window.ECON = (() => {
     document.querySelectorAll('[data-corsas]').forEach(e => e.textContent = money());
   }
 
+  // ---- El Banco de Valcorsa: 7 quick taps on any ₡ chip = the vault opens.
+  // (Undocumented. The economy is per-device localStorage anyway — league points
+  // never touch money, so the worst a leak does is fill a kid's toy garage.)
+  let bancoN = 0, bancoT = 0;
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.corsas, [data-corsas]')) return;
+    const now = performance.now();
+    if (now - bancoT > 3000) bancoN = 0;
+    bancoT = now;
+    if (++bancoN >= 7) {
+      bancoN = 0;
+      setMoney(9999999);
+      if (window.toast) toast('EL BANCO DE VALCORSA SMILES UPON YOU · ₡9,999,999');
+    }
+  });
+
   // The store is a STOREFRONT, not a settings menu: search up top, aisles you
   // flick through, a grid of product cards with pictures and big prices.
   function shopHTML() {
