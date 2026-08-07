@@ -2579,9 +2579,11 @@ function endRace() {                                    // the player's race is 
   if (window.ARENA && ARENA.active) return;             // arenas end their own way (last kart rolling)
   if (window.NET && NET.phase === 'racing')
     NET.reportFinish(player.finishTime || raceTime, player.lap);
-  // scheduled (VD####) rooms are LEAGUE races: your full-field finish banks points
-  if (window.LEAGUE && window.NET && NET.room)
-    LEAGUE.onSoloFinish(NET.room, raceStandings().findIndex(c => c.isPlayer) + 1);
+  // EVERY real race banks league points (Adam's law: you finish, you're on the board).
+  // Challenge rooms (manual codes) never score — league.js sorts the rest.
+  if (window.LEAGUE)
+    LEAGUE.onSoloFinish((window.NET && NET.room) || '', raceStandings().findIndex(c => c.isPlayer) + 1,
+                        track && track.def && track.def.id);
   stopVerstappenTheme();
   setMusicFinalLap(false);
   if (window.ECON && player._won == null) {             // position among finishers is locked at the line

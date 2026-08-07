@@ -19,24 +19,40 @@ window.LEAGUE = (() => {
   const leagueNow = () => (typeof hardMode !== 'undefined' && hardMode) ? 'hard' : 'standard';
 
   // ---------------------------------------------------------------- scoring
-  // Called by NET when a live scheduled race compiles results, and by endRace
-  // for a solo scheduled grid. Only VD#### rooms are league races.
-  async function postResult(room, myPos) {
-    if (!/^VD\d{4}$/.test(room || '')) return;                 // challenge rooms never score
+  // EVERY real race scores (Adam's law — you finish, you're on the board):
+  //   · VD#### room on today's card  → that slot's league race
+  //   · solo race of a card venue    → credits as that slot (you ran the daily)
+  //   · any other solo race          → OPEN PRACTICE (slot -1): one banked result
+  //                                    a day, your best one — grind can't farm it
+  //   · manual challenge rooms       → never score (canon)
+  async function postResult(room, myPos, venueId) {
+    if (room && !/^VD\d{4}$/.test(room)) return;               // challenge rooms never score
     const today = window.SCHED ? SCHED.todays() : [];
-    const slot = today.findIndex(r => r.room === room);
-    if (slot < 0) return;
+    let slot = room ? today.findIndex(r => r.room === room) : -1;
+    if (room && slot < 0) return;                              // stale room code: no free points
+    if (!room && venueId != null) {
+      const i = today.findIndex(r => r.def && r.def.id === venueId);
+      if (i >= 0) slot = i;                                    // you raced today's venue — it counts
+    }
     const c = client(); if (!c) return;
     const a = acct();
+    const player = a.username || a.name || 'RACER';
     const pts = PTS[Math.max(0, Math.min(myPos - 1, PTS.length - 1))];
     const d = new Date();
     const day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     try {
+      if (slot < 0) {                                          // open practice: keep the day's best
+        const { data: ex } = await c.from('league_results').select('pts')
+          .eq('league', leagueNow()).eq('day', day).eq('slot', -1)
+          .eq('player', player).eq('pcode', a.code || '').maybeSingle();
+        if (ex && ex.pts >= pts) return;
+      }
       await c.from('league_results').upsert({
-        league: leagueNow(), day, slot, room,
-        player: a.username || a.name || 'RACER', pcode: a.code || '', pos: myPos, pts,
+        league: leagueNow(), day, slot, room: room || '',
+        player, pcode: a.code || '', pos: myPos, pts,
       }, { onConflict: 'league,day,slot,player,pcode' });
-      if (window.toast) toast('🏆 P' + myPos + ' · +' + pts + ' pts — ' + (leagueNow() === 'hard' ? 'HARD' : 'VCRA STANDARD') + ' LEAGUE');
+      const tag = slot >= 0 ? (leagueNow() === 'hard' ? 'HARD LEAGUE' : 'VCRA STANDARD LEAGUE') : 'OPEN PRACTICE — banked';
+      if (window.toast) toast('🏆 P' + myPos + ' · +' + pts + ' pts — ' + tag);
     } catch (e) { /* offline: the race still happened, the points didn't */ }
   }
 
@@ -48,7 +64,7 @@ window.LEAGUE = (() => {
   }
 
   // solo scheduled race (grid of one human + the locals): score my field position
-  function onSoloFinish(room, myPos) { postResult(room, myPos); }
+  function onSoloFinish(room, myPos, venueId) { postResult(room, myPos, venueId); }
 
   // ---------------------------------------------------------------- standings
   async function fetchStandings(league) {

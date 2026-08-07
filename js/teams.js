@@ -65,6 +65,55 @@ window.TEAMS = (() => {
     } catch (e) {}
   }
 
+  // ---- identity: the name you log as + your racing number (Adam's spec) ----
+  const myNum = () => {
+    try { const k = JSON.parse(localStorage.getItem('apex_kit')); if (k && k.num) return k.num; } catch (e) {}
+    return null;
+  };
+  async function saveIdentity(newName, num) {
+    const a = acct();
+    const oldName = myName();
+    newName = (newName || oldName).trim().slice(0, 16);
+    // the number rides the kit (it's what the decal roundel paints) — and every livery kart
+    if (num) {
+      try {
+        const k = JSON.parse(localStorage.getItem('apex_kit') || '{}'); k.num = num;
+        localStorage.setItem('apex_kit', JSON.stringify(k));
+        if (typeof KIT !== 'undefined') { KIT.num = num; if (typeof saveKit === 'function') saveKit(); }
+        const liv = JSON.parse(localStorage.getItem('vc_livery') || '[]');
+        for (const kart of liv) if (kart.kit) kart.kit.num = num;
+        localStorage.setItem('vc_livery', JSON.stringify(liv));
+      } catch (e) {}
+    }
+    if (newName.toLowerCase() !== oldName.toLowerCase()) {
+      // claim the new name (unique across the country) before letting go of the old
+      const r = await fetch(REST + '/racers?on_conflict=name_lc', {
+        method: 'POST', headers: { ...HEAD, Prefer: 'resolution=ignore-duplicates,return=representation' },
+        body: JSON.stringify({ name_lc: newName.toLowerCase(), name: newName, code: a.code || '', team: myTeam() || null, role: myRole(), num: num || myNum() }),
+      });
+      if (!r.ok) return 'offline';
+      let rows = await r.json();
+      if (!rows.length) {
+        // ignored duplicate — but it might be OUR row from a half-finished rename
+        const ex = await jfetch(REST + '/racers?name_lc=eq.' + encodeURIComponent(newName.toLowerCase()) + '&select=code').catch(() => null);
+        if (!(ex && ex[0] && ex[0].code === (a.code || ''))) return 'taken';
+      }
+      await fetch(REST + '/racers?name_lc=eq.' + encodeURIComponent(oldName.toLowerCase()), { method: 'DELETE', headers: HEAD }).catch(() => {});
+      a.username = newName;
+      localStorage.setItem('apex_account', JSON.stringify(a));
+      // pair.js keeps its own live `account` object (shared lexical global) and re-saves
+      // it on pairing events — mutate THAT too or it clobbers the rename right back
+      try { if (typeof account !== 'undefined' && account) { account.username = newName; if (typeof saveAccount === 'function') saveAccount(account); } } catch (e) {}
+      if (typeof updateAccountChip === 'function') try { updateAccountChip(); } catch (e) {}
+    } else {
+      await fetch(REST + '/racers?on_conflict=name_lc', {
+        method: 'POST', headers: { ...HEAD, Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({ name_lc: oldName.toLowerCase(), name: oldName, team: myTeam() || null, role: myRole(), num: num || myNum() }),
+      }).catch(() => {});
+    }
+    return 'ok';
+  }
+
   // ---- the PAGE ----
   function ensureDom() {
     if ($('teamsScreen')) return;
@@ -136,7 +185,7 @@ window.TEAMS = (() => {
       const rows = await jfetch(REST + '/teams?code=eq.' + code);
       lookupOk = true;
       team = rows && rows[0];
-      roster = await jfetch(REST + '/racers?team=eq.' + code + '&select=name,role').catch(() => []) || [];
+      roster = await jfetch(REST + '/racers?team=eq.' + code + '&select=name,role,num').catch(() => []) || [];
     } catch (e) {}
     if (!team) {
       if (lookupOk) { localStorage.setItem('vc_team', ''); render(); }
@@ -145,7 +194,7 @@ window.TEAMS = (() => {
     }
 
     const byRole = {};
-    for (const r of roster) (byRole[r.role || 'racer'] = byRole[r.role || 'racer'] || []).push(r.name);
+    for (const r of roster) (byRole[r.role || 'racer'] = byRole[r.role || 'racer'] || []).push(r);
     const missing = [];
     if (!byRole.engineer) missing.push('VCRA notes: no ENGINEER on file — who’s building the karts?');
     if (!byRole.radio) missing.push('VCRA notes: no RADIO — who’s calling the pit?');
@@ -156,19 +205,44 @@ window.TEAMS = (() => {
         <div class="tmBname"><b>${team.name}</b><span>VCRA registered crew · ${roster.length} member${roster.length === 1 ? '' : 's'}</span></div>
         <div class="tmTicket"><span>JOIN CODE</span><b>${code}</b><em>send it to the boys</em></div>
       </div>
+      <div id="tmIdent">
+        <span>RACING AS</span><b>${myName()}</b><i class="tmNum">#${myNum() || '—'}</i>
+        <button id="tmIdEdit">CHANGE NAME / NUMBER</button>
+      </div>
+      <div id="tmIdForm" style="display:none">
+        <input id="tmIdName" maxlength="16" placeholder="Race name" autocomplete="off">
+        <input id="tmIdNum" type="number" min="1" max="99" placeholder="#">
+        <button id="tmIdSave">SAVE</button>
+        <p id="tmIdMsg" class="setNote"></p>
+      </div>
       <p class="setNote">— YOUR HAT · tap to swap, the crew sees it —</p>
       <div id="tmMyRole">${hatsHTML(myRole(), true)}</div>
       <p class="setNote">— THE CREW —</p>
       <div class="tmCrew">${ROLES.map(r => `
         <div class="tmCrewCol">
           <div class="tmCrewHead"><i>${r.icon}</i>${r.name}</div>
-          ${(byRole[r.id] || []).map(n => `<span class="liveChip${n === myName() ? ' meChip' : ''}">${n}</span>`).join('') || '<span class="tmEmpty">—</span>'}
+          ${(byRole[r.id] || []).map(m => `<span class="liveChip${m.name === myName() ? ' meChip' : ''}">${m.name}${m.num ? ' <i class="chipNum">#' + m.num + '</i>' : ''}</span>`).join('') || '<span class="tmEmpty">—</span>'}
         </div>`).join('')}
       </div>
       ${missing.map(m => `<p class="tmWarn">${m}</p>`).join('')}
       <p class="setNote">— CONSTRUCTORS · VCRA STANDARD —</p>
       <div id="tmBoard"><p class="setNote">reading the tower…</p></div>
       <button id="tmLeave">LEAVE THE CREW</button>`;
+    $('tmIdEdit').onclick = () => {
+      const f = $('tmIdForm');
+      f.style.display = f.style.display === 'none' ? 'flex' : 'none';
+      $('tmIdName').value = myName();
+      $('tmIdNum').value = myNum() || '';
+    };
+    $('tmIdSave').onclick = async () => {
+      const n = ($('tmIdName').value || '').trim();
+      const num = Math.max(0, Math.min(99, +($('tmIdNum').value || 0))) || null;
+      $('tmIdMsg').textContent = 'filing with the VCRA…';
+      const res = await saveIdentity(n, num);
+      if (res === 'taken') { $('tmIdMsg').textContent = 'That name is taken. The country is watching — pick another.'; return; }
+      if (res === 'offline') { $('tmIdMsg').textContent = 'Paddock phones are down. Try again in a minute.'; return; }
+      render();
+    };
     body.querySelectorAll('#tmMyRole .tmHat').forEach(el => el.onclick = async () => {
       localStorage.setItem('vc_role', el.dataset.role);
       await saveMe(code, el.dataset.role);

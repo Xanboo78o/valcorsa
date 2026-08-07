@@ -2075,3 +2075,16 @@ body.tabsOn #teamsScreen .tmScroll { padding-bottom: 90px; }
 @keyframes mgB { 0%, 100% { transform: scale(.7); } 50% { transform: scale(1.25); } }
 #mgMsg { font-size: 13px; color: #cdd9f6; line-height: 1.6; min-height: 46px; }
 #fgStage > button, #fgStage .clOpts + button { margin-top: 10px; }
+/* teams identity strip */
+#tmIdent { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; flex-wrap: wrap; }
+#tmIdent span { font-size: 9px; letter-spacing: .16em; color: #8fa8e8; }
+#tmIdent b { font-family: 'Archivo Black', sans-serif; font-size: 17px; color: #fff; }
+#tmIdent .tmNum { font-style: normal; font-family: 'Archivo Black', sans-serif; font-size: 15px;
+  color: #ff8c1a; transform: skewX(-8deg); }
+#tmIdent button { min-width: 0 !important; padding: 7px 12px !important; font-size: 10px; margin-left: auto; }
+#tmIdForm { display: flex; gap: 8px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+#tmIdForm input { box-sizing: border-box; }
+#tmIdName { width: 200px; }
+#tmIdNum { width: 74px; }
+#tmIdSave { min-width: 0 !important; padding: 10px 16px !important; }
+.chipNum { font-style: normal; color: #ff8c1a; font-size: 10px; }

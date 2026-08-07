@@ -28,7 +28,7 @@ for (const src of SCRIPTS) {
   await new Promise((res, rej) => {
     const s = document.createElement('script');
     s.src = src + (window.APEX_V ? '?v=' + window.APEX_V : '');
-    s.onload = res; s.onerror = () => rej(new Error('failed to load ' + src));
+    s.onload = res; s.onerror = () => { console.warn('skipping ' + src); res(); };   // a 404 mid-deploy must not brick the boot
     document.body.appendChild(s);
   });
 }
