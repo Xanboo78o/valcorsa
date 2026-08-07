@@ -2034,9 +2034,11 @@ function stepCar(car, input, dt) {
   // you drift for the line and the clip, not for free pace)
   if (input.handbrake)
     vf -= Math.sign(vf) * Math.min(Math.abs(vf), Math.abs(vl) * PHYS.driftBleed * dt);
-  // stability assist: bleed off slide when you're not actively steering (catches spins)
+  // stability assist: bleed off slide when you're not actively steering (catches spins).
+  // The DRIFT ASSIST is a physical unit in the bay — pull it for space and this gets spicy.
   if (!input.handbrake) {
-    const straighten = PHYS.stability * (1 - Math.min(Math.abs(input.steer), 1)) * dt;
+    const straighten = PHYS.stability * (PM && PM.stab != null ? PM.stab : 1)
+      * (1 - Math.min(Math.abs(input.steer), 1)) * dt;
     vl -= Math.sign(vl) * Math.min(Math.abs(vl), straighten);
   }
   car.slip = Math.abs(vl);

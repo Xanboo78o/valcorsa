@@ -20,6 +20,7 @@ window.GARAGE3D = (() => {
   const STATIONS = {
     door:    { pos: [0, 3.2, 8.6],  look: [0, 1.4, 0],    label: 'GARAGE' },
     lift:    { pos: [-0.6, 2.2, 4.9], look: [-3.1, 1.3, 2.2], label: 'THE LIFT' },
+    office:  { pos: [-1.2, 1.8, 6.2], look: [-1.6, 0.7, 3.8], label: 'OFFICE' },
     shelf:   { pos: [4.4, 2.0, 2.2],look: [6.4, 1.4, -1], label: 'ENGINE SHELF' },
     drawers: { pos: [-4.2, 1.9, 2.4],look: [-6.2, 1.1, -1],label: 'HARDWARE' },
     legacy:  { pos: [-2.6, 2.0, -1.6],look: [-3.4, 1.5, -5.4],label: 'THE SHELF' },
@@ -157,14 +158,42 @@ window.GARAGE3D = (() => {
         ? `<div class="gRow"><div class="gInfo"><b>⚙️ engine service · ${Math.round(w.engine * 100)}%</b><small>uses: ${gasket.name}</small></div><button class="gGrab" data-fix="engine">WRENCH</button></div>`
         : `<div class="gRow"><div class="gInfo"><b>⚙️ engine service · ${Math.round(w.engine * 100)}%</b><small>needs a head gasket (HG) — do not forget this</small></div><button class="gGrab" data-shop="1">SHOP</button></div>`);
     }
+    // THE EXTRACTOR (Workshop tier+): chase out stripped bolts, labor only
+    if (tier() >= 2) {
+      if (w.tire > 0.05 && w.tire <= 0.25)
+        jobs.push(`<div class="gRow"><div class="gInfo"><b>🪛 extractor: chewed tire bolts</b><small>labor only — Workshop perk</small></div><button class="gGrab" data-fix="exTire">WRENCH</button></div>`);
+      if (w.engine >= 0.8 && w.engine < 0.99)
+        jobs.push(`<div class="gRow"><div class="gInfo"><b>🪛 extractor: stripped mounts</b><small>labor only — Workshop perk</small></div><button class="gGrab" data-fix="exEng">WRENCH</button></div>`);
+    }
+    // THE BAY: real space. Engine + drift assist occupy it; stamped builds install here.
+    const bay = bayState();
+    const builds = EM().builds();
+    const curEng = bay.k && bay.k.parts && bay.k.parts.Engine;
+    const curB = builds.find(b => b.id === curEng);
+    const bayRows = builds.slice(-4).reverse().map(b => {
+      if (b.id === curEng) return `<div class="gRow"><div class="gInfo"><b>⚙️ ${b.name}</b><small>installed · ${b.vp} vp</small></div></div>`;
+      const v = engineVol(b.id);
+      const fits = v + (bay.assist ? ASSIST_VOL : 0) <= bay.cap;
+      return `<div class="gRow"><div class="gInfo"><b>⚙️ ${b.name}</b><small>${b.designation} · ${b.vp} vp · ${v} units</small></div>
+        ${fits ? `<button class="gGrab" data-install="${b.id}">WRENCH IN</button>`
+               : `<button class="gGrab" data-nofit="${b.id}">WON'T FIT</button>`}</div>`;
+    }).join('');
     pan.innerHTML = `<h3>THE LIFT · ${liftCar ? liftCar.userData.kitName.toUpperCase() : ''}</h3>
       <p class="gKind">DRAG TO ORBIT · PINCH/SCROLL TO ZOOM · TAP A PART TO SHAKE IT</p>
       ${clean ? '<p class="gEmpty">she’s clean. go put some laps on her.</p>'
         : jobs.length ? '<p class="gKind">THE JOB SHEET</p>' + jobs.join('')
-        : '<p class="gEmpty">something’s off with this kart… get your hands on it and find it.</p>'}`;
+        : '<p class="gEmpty">something’s off with this kart… get your hands on it and find it.</p>'}
+      <p class="gKind">ENGINE BAY · ${bay.used}/${bay.cap} UNITS</p>
+      <div class="gRow"><div class="gInfo"><b>🧰 drift assist unit</b><small>${bay.assist ? ASSIST_VOL + ' units · steadies the rear' : 'REMOVED — she\'s spicy now'}</small></div>
+        <button class="gGrab" data-assist="1">${bay.assist ? 'PULL IT' : 'REFIT'}</button></div>
+      ${bayRows || '<p class="gEmpty">no stamped builds — the workbench is waiting</p>'}`;
     pan.classList.add('open');
     pan.querySelectorAll('[data-fix]').forEach(b => b.onclick = () => wrench(b.dataset.fix, { tirePart, gasket }));
     pan.querySelectorAll('[data-shop]').forEach(b => b.onclick = () => { close(); window.closeGarage(); setTimeout(() => window.vcTab && vcTab('shop'), 180); });
+    pan.querySelectorAll('[data-install]').forEach(b => b.onclick = () => wrench('install', { buildId: b.dataset.install }));
+    pan.querySelectorAll('[data-nofit]').forEach(b => b.onclick = () =>
+      say(bay.assist ? 'no room — pull the drift assist and it fits' : 'no room in this chassis. bigger kart, smaller engine.', true));
+    pan.querySelectorAll('[data-assist]').forEach(b => b.onclick = () => wrench('assist', {}));
   }
 
   // ---------------- THE WRENCH (slice 2): drag round and round until it slows
@@ -251,10 +280,31 @@ window.GARAGE3D = (() => {
         w.tire = stripped ? 0.18 : 0;
         w.flat = false;
         found.delete('flat'); found.delete('susp'); found.delete('tires');
-      } else {
+        logReceipt('tire swap', parts.tirePart.name, stripped ? 'stripped — janky' : 'torqued to spec');
+      } else if (job === 'engine') {
         my[parts.gasket.id] = Math.max(0, (my[parts.gasket.id] || 0) - 1);
         w.engine = stripped ? 0.88 : 1;
         found.delete('engine');
+        logReceipt('engine service', parts.gasket.name, stripped ? 'stripped — janky' : 'torqued to spec');
+      } else if (job === 'install') {
+        const k = activeKart();
+        if (k) {
+          k.parts = k.parts || {};
+          k.parts.Engine = parts.buildId;
+          saveKart(k);
+          const b = EM().builds().find(x => x.id === parts.buildId);
+          logReceipt('engine install', b ? b.name : parts.buildId, stripped ? 'mounts stripped' : 'strapped & connected');
+        }
+      } else if (job === 'exTire') {
+        w.tire = stripped ? 0.12 : 0;
+        logReceipt('extractor: tire bolts', '—', stripped ? 'stripped AGAIN. incredible.' : 'clean threads');
+      } else if (job === 'exEng') {
+        w.engine = stripped ? 0.92 : 1;
+        logReceipt('extractor: engine mounts', '—', stripped ? 'stripped AGAIN. incredible.' : 'clean threads');
+      } else if (job === 'assist') {
+        const k = activeKart();
+        if (k) { k.assistOut = !k.assistOut; saveKart(k);
+          logReceipt(k.assistOut ? 'drift assist REMOVED' : 'drift assist refitted', '—', stripped ? 'bolts chewed' : ''); }
       }
       setInv(my); wearSet(w);
       say(stripped ? '💀 stripped the bolts — janky, but she’ll hold. mostly.'
@@ -266,6 +316,122 @@ window.GARAGE3D = (() => {
     ov.addEventListener('pointermove', onMove);
     ov.addEventListener('pointerup', onUp);
     ov.querySelector('.wrBail').onclick = () => ov.remove();
+  }
+
+  // ---------------- SLICE 3: THE BAY GRID — parts occupy real space.
+  // Trailmakers rule: complex shapes, simple volumes. Units are bay-blocks.
+  const BAYS = { gt: 40, muscle: 48, rally: 36, formula: 30, truck: 60, kart: 16, bike: 8 };
+  const ASSIST_VOL = 8;                        // the factory drift-assist unit
+  function engineVol(id) {
+    if (!id) return 10;                        // stock lump
+    if (String(id).startsWith('b')) {          // a stamped build: size letter + turbo
+      const b = EM().builds().find(x => x.id === id);
+      if (!b) return 10;
+      const sz = (b.designation || 'M')[0];
+      return (sz === 'S' ? 12 : sz === 'L' ? 32 : 20) + (b.designation.includes('T') ? 6 : 0);
+    }
+    return 12;                                 // catalog part
+  }
+  const activeKart = () => {
+    const liv = JSON.parse(localStorage.getItem('vc_livery') || '[]');
+    return liv.find(k => k.id === localStorage.getItem('vc_activeKart')) || liv[0] || null;
+  };
+  function saveKart(k) {
+    const liv = JSON.parse(localStorage.getItem('vc_livery') || '[]');
+    const i = liv.findIndex(x => x.id === k.id);
+    if (i >= 0) liv[i] = k; else liv.push(k);
+    localStorage.setItem('vc_livery', JSON.stringify(liv));
+    if (window.ECON && ECON.dirty) ECON.dirty();
+  }
+  function bayState() {
+    const k = activeKart();
+    const cap = BAYS[k && k.chassis || 'gt'] || 40;
+    const engV = engineVol(k && k.parts && k.parts.Engine);
+    const assist = !(k && k.assistOut);
+    return { k, cap, engV, assist, used: engV + (assist ? ASSIST_VOL : 0) };
+  }
+
+  // ---------------- SLICE 5: OFFICE — receipts, rent tiers, the job inbox shell.
+  const TIERS = [
+    null,
+    { name: 'RENTED LOCKUP', rent: 40,  perk: 'a lift, a bench, a dream' },
+    { name: 'THE WORKSHOP',  rent: 200, perk: 'THE EXTRACTOR — un-strip your sins' },
+    { name: 'GARAGE GRANDE', rent: 500, perk: 'DYNO CORNER — re-roll one build per cycle' },
+  ];
+  const tier = () => Math.min(3, Math.max(1, +(localStorage.getItem('vc_g_tier') || 1)));
+  const receipts = () => JSON.parse(localStorage.getItem('vc_receipts') || '[]');
+  function logReceipt(job, partName, note) {
+    const r = receipts();
+    r.unshift({ n: r.length + 1, job, part: partName || '—', note: note || '', when: 'race day ' + (+(localStorage.getItem('vc_g_races') || 0)) });
+    localStorage.setItem('vc_receipts', JSON.stringify(r.slice(0, 40)));
+  }
+  // rent cycles on race count (endRace wrap #5 — the chain holds)
+  const _rentEnd = window.endRace;
+  if (_rentEnd && !_rentEnd._rent) {
+    window.endRace = function () {
+      _rentEnd.apply(this, arguments);
+      try {
+        const n = +(localStorage.getItem('vc_g_races') || 0) + 1;
+        localStorage.setItem('vc_g_races', n);
+        if (n % 12 === 0) {
+          const t = TIERS[tier()];
+          const money = +(localStorage.getItem('vc_money') || 0);
+          if (money >= t.rent) {
+            localStorage.setItem('vc_money', money - t.rent);
+            if (window.toast) toast('🏚️ garage rent paid: ₡' + t.rent + ' (' + t.name + ')');
+          } else if (tier() > 1) {
+            localStorage.setItem('vc_g_tier', tier() - 1);
+            if (window.toast) toast('🏚️ couldn\'t make rent — downsized to ' + TIERS[tier()].name);
+          }
+          localStorage.setItem('vc_dyno_used', '0');
+          if (window.ECON) ECON.refreshBalance();
+        }
+      } catch (e) {}
+    };
+    window.endRace._rent = true;
+  }
+  function renderOffice() {
+    const pan = $('gStationPanel');
+    const t = tier(), T = TIERS[t];
+    const races = +(localStorage.getItem('vc_g_races') || 0);
+    const due = 12 - (races % 12);
+    const jobs = JSON.parse(localStorage.getItem('vc_jobs') || '[]');
+    const money = +(localStorage.getItem('vc_money') || 0);
+    const up = TIERS[t + 1];
+    pan.innerHTML = `<h3>OFFICE</h3>
+      <div class="gSpec"><b>${T.name}</b> · rent ₡${T.rent} every 12 race days · due in ${due}</div>
+      <p class="gEmpty">${T.perk}</p>
+      ${up ? `<button class="gAction" id="gUpTier">UPGRADE: ${up.name} · ₡${up.rent}/cycle${money < up.rent ? ' (need ₡' + up.rent + ' on hand)' : ''}</button>` : ''}
+      ${t >= 3 ? `<button class="gAction" id="gDyno" ${localStorage.getItem('vc_dyno_used') === '1' ? 'disabled' : ''}>🎲 DYNO: re-roll your newest build (1/cycle)</button>` : ''}
+      <p class="gKind">JOB REQUESTS</p>
+      ${jobs.length ? jobs.map(j => `<div class="gRow"><div class="gInfo"><b>${j.from}: ${j.text}</b></div></div>`).join('')
+                    : '<p class="gEmpty">quiet. when the league connects, your team\'s requests land here.</p>'}
+      <p class="gKind">RECEIPTS</p>
+      ${receipts().slice(0, 8).map(r => `<div class="gRow"><div class="gInfo"><b>#${r.n} ${r.job}</b><small>${r.part}${r.note ? ' · ' + r.note : ''} · ${r.when}</small></div></div>`).join('')
+        || '<p class="gEmpty">no work on the books yet</p>'}`;
+    pan.classList.add('open');
+    const upB = $('gUpTier');
+    if (upB) upB.onclick = () => {
+      if (money < up.rent) { say('rent is due on signing — you need ₡' + up.rent + ' on hand', true); return; }
+      localStorage.setItem('vc_money', money - up.rent);
+      localStorage.setItem('vc_g_tier', t + 1);
+      if (window.ECON) ECON.refreshBalance();
+      say('📜 signed the lease: ' + up.name);
+      renderOffice();
+    };
+    const dy = $('gDyno');
+    if (dy) dy.onclick = () => {
+      const bs = EM().builds();
+      if (!bs.length) { say('nothing to dyno — stamp a build first', true); return; }
+      const b = bs[bs.length - 1];
+      const old = b.vp;
+      b.vp = Math.max(30, Math.round(b.vp * (0.92 + Math.random() * 0.22)));
+      EM().saveBuilds(bs);
+      localStorage.setItem('vc_dyno_used', '1');
+      logReceipt('dyno session', b.name, old + ' → ' + b.vp + ' vp');
+      say('🎲 the dyno says: ' + b.name + ' is ' + b.vp + ' vp (was ' + old + ')');
+      renderOffice();
+    };
   }
 
   // ---------------------------------------------------------------- the room
@@ -377,6 +543,7 @@ window.GARAGE3D = (() => {
     else if (p.x < -5) goTo('drawers');
     else if (p.z < -5 && p.x < -1.5) goTo('legacy');
     else if (p.z < -2 && p.z > -4.5 && Math.abs(p.x) < 3) goTo('bench');
+    else if (p.x > -2.2 && p.x < -1 && p.z > 3.2) goTo('office');   // the pedestal
     else if (p.x < -1 && p.z > 0.5) goTo('lift');
   }
   // lift-mode input: drag orbits, pinch/wheel zooms, a still tap shakes the part under it
@@ -498,6 +665,7 @@ window.GARAGE3D = (() => {
         `<p class="gEmpty">the Standardization Act retired these. they watch you work.</p>`;
     } else if (name === 'bench') { renderBench(); return; }
     else if (name === 'lift') { renderLift(); return; }
+    else if (name === 'office') { renderOffice(); return; }
     else { pan.classList.remove('open'); return; }
     pan.innerHTML = html;
     pan.classList.add('open');

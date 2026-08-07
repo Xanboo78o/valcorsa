@@ -246,7 +246,10 @@ window.ECON = (() => {
   function mods() {   // physics reads THIS: the active livery kart's build
     if (modsCache) return modsCache;
     const act = livery().find(k => k.id === activeId());
-    return modsCache = computeMods(act ? act.parts : null);
+    const m = computeMods(act ? act.parts : null);
+    // drift assist is a physical bay unit (garage3d): pulled out = way less self-straightening
+    m.stab = act && act.assistOut ? 0.25 : 1;
+    return modsCache = m;
   }
 
   // ---- garage UI: doors → livery rack → the SNAP WHEEL builder (Mario Kart style) ----
@@ -437,5 +440,6 @@ window.ECON = (() => {
   }
 
   refreshBalance();   // boot injects us after DOMContentLoaded — refresh now
-  return { money, racePayout, refreshBalance, openPack, give, inv, cards, mods, garageUI };
+  return { money, racePayout, refreshBalance, openPack, give, inv, cards, mods, garageUI,
+           dirty: () => { modsCache = null; } };
 })();
