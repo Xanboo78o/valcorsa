@@ -47,3 +47,43 @@ tomorrow, sorry Vince." "no its fine i suck anyway lmfao"
 Fitment is never impossible — mismatches are JANKY: assemble with persuasion,
 +jank per size-step of mismatch. Jank lowers the average, widens the spread —
 usually worse, occasionally MAGIC. The truth lands at the DYNO ROLL on stamping.
+
+## Design session locks (2026-08-07, 12 questions, sessions "sounder")
+
+**Jobs**: clients TYPE their requests in their own words (no auto-telemetry).
+Human complaints, human vagueness — "it feels slidey idk" is a valid ticket.
+
+**Diagnosis**: eyes AND hands. Damaged parts LOOK wrong (wobble, stains,
+bald tires) and you can grab-shake them — loose ones rattle and shift.
+
+**Shelves**: full physical inventory. No search, no auto-sort. Your layout
+is your identity; a messy garage is a slow garage.
+
+**Space**: Trailmakers rule — complex part shapes, simple grid volumes.
+"A 4×5×2 under your hood." Parts occupy block-space in bays; if it doesn't
+fit, something comes out.
+
+**Connections**: ports have TYPES (like Phillips vs star screws) — Ftg, KNOT,
+etc. NO in-game tutorial site: the tutorials are REAL YouTube videos on
+Adam's actual channel. The game's knowledge base lives in the real world.
+
+**Delivery**: teams share a livery + a team LOCKER with a tab per member
+(everyone's pack winnings — stickers, colors — usable by owner AND engineer).
+Team engineer: rename lands in the shared livery + app notification +
+optional receipt. SHOP engineer (for strangers): the fast-food ordering
+console — tap the services performed, add description, total price; client
+pays, car returns to their livery.
+
+**Wrenching**: a wrench appears, you drag round and round until it slows to
+a stop. Push past the stop = STRIPPED BOLT (Jank Law applies to labor).
+Forgot the gasket? It runs. It leaks. They come back mad.
+
+**Focus**: one car in the garage at a time. Pick the job, that car's on
+the lift, nothing else exists.
+
+**Pay**: team engineers draw salary from the Manager's wallet (contracts
+system); shop work for strangers is priced by you at the console.
+
+**The garage grows**: RENTED TIERS. Monthly rent for square footage —
+bigger premises, more shelf grids, dyno corner, paint booth. Downsize if
+broke. The shop must earn its floor.
