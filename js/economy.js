@@ -354,7 +354,16 @@ window.ECON = (() => {
                    'Enginos Volante F': 'formula', 'Norte Titan': 'truck',
                    'Granada Sprint Kart': 'kart', 'Perro Moto': 'bike',
                    'F1 Monoposto': 'monoposto', 'Heiligen Endurance Frame': 'endurance',
-                   'Barrel Kart': 'barrel', 'Twin-Engine Longframe': 'longframe', 'The Sofa': 'sofa' };
+                   'Barrel Kart': 'barrel', 'Twin-Engine Longframe': 'longframe', 'The Sofa': 'sofa',
+                   'Enginos Berlina M': 'berlina', 'Enginos Bavaria GT': 'bavaria', 'Enginos Piccola 02': 'piccola',
+                   'Houndsborough Duke': 'duke', 'Houndsborough Chief': 'chief',
+                   'Heiligen Sturm': 'sturm', 'Heiligen Wald': 'wald',
+                   'Norte Stallion GT3': 'stallion', 'Norte Potro': 'potro',
+                   'Granada Garra': 'garra', 'Granada Flecha': 'flecha',
+                   'Braewick Anvil': 'anvil', 'Braewick Torr': 'torr',
+                   'Đồi Tám-Sáu': 'tamsau', 'Đồi Trâu': 'trau', 'Đồi Ba Bánh': 'babanh',
+                   'Hilja Tähti': 'tahti', 'Hilja Lumi': 'lumi', 'Hilja Siipi': 'siipi',
+                   'Shopping Kart': 'shopkart' };
   function ownedChassis() {   // you START with the Enginos GT; the rest are earned
     const my = inv(), set = new Set(['gt']);
     for (const p of PARTS)
@@ -523,10 +532,11 @@ window.ECON = (() => {
     showDoors();
   }
 
-  // ---- PACKS ARE WON, NOT JUST BOUGHT (Adam's law): finish a race, rip a pack.
-  // Tier rides your finishing position; the rip button lives on the results board
-  // (re-injected each render — live results rebuild the board while bots finish).
-  const PACK_BY_POS = pos => pos <= 1 ? 'valcorsa' : pos <= 3 ? 'chanes' : pos <= 6 ? 'basil' : 'xb78';
+  // ---- PACKS ARE WON (Adam's correction: race prizes are the FLEX packs — the
+  // auras, the smokes, the finales. Parts you BUY; style you EARN.) Podium pulls
+  // a Celebration pack, everyone else a Wrap pack. Rip button lives on the
+  // results board (re-injected each render — live results rebuild the board).
+  const PACK_BY_POS = pos => pos <= 3 ? 'celeb' : 'wrap';
   const prevER = window.endRace;
   if (prevER && !prevER._packs) {
     const wrapped = function (...a) {
@@ -550,16 +560,16 @@ window.ECON = (() => {
     if (inner && res.style.display !== 'none' && !document.getElementById('ripBtn')) {
       const b = document.createElement('button');
       b.id = 'ripBtn';
-      const sp = SPONSORS.find(x => x.id === id);
-      b.textContent = 'YOU WON A PARTSPACK — RIP IT (' + (sp ? sp.name : id).toUpperCase() + ')';
-      b.onclick = () => { localStorage.removeItem('vc_pendingpack'); openPack(id, true); };
+      const kind = (id === 'celeb' || id === 'wrap') ? id : 'wrap';   // old parts-pack pendings degrade gracefully
+      b.textContent = kind === 'celeb' ? 'PODIUM PRIZE — RIP A CELEBRATION PACK' : 'RACE PRIZE — RIP A WRAP PACK';
+      b.onclick = () => { localStorage.removeItem('vc_pendingpack'); if (window.FLEX) FLEX.openPack(kind, true); };
       inner.appendChild(b);
     }
     // skipped the results? the pack rips itself on the next paddock visit
     const menu = document.getElementById('menu');
     if (menu && menu.style.display !== 'none' && (!res || res.style.display === 'none') && !document.getElementById('packReveal')) {
       localStorage.removeItem('vc_pendingpack');
-      openPack(id, true);
+      if (window.FLEX) FLEX.openPack((id === 'celeb' || id === 'wrap') ? id : 'wrap', true);
     }
   }, 1000);
 

@@ -7,10 +7,22 @@
 'use strict';
 
 const CHASSIS = ['gt', 'muscle', 'rally', 'formula', 'truck', 'kart', 'bike',
-                 'monoposto', 'endurance', 'barrel', 'longframe', 'sofa'];
+                 'monoposto', 'endurance', 'barrel', 'longframe', 'sofa',
+                 'berlina', 'bavaria', 'piccola', 'duke', 'chief', 'sturm', 'wald',
+                 'stallion', 'potro', 'garra', 'flecha', 'anvil', 'torr',
+                 'tamsau', 'trau', 'babanh', 'tahti', 'lumi', 'siipi', 'shopkart'];
 // Valcorsan showroom — every chassis is a factory car from an in-world marque.
 const CHASSIS_LABELS = { gt: 'Enginos GT', muscle: 'Houndsborough Iron', rally: 'Heiligen Strada', formula: 'Enginos Volante F', truck: 'Norte Titan', kart: 'Granada Sprint Kart', bike: 'Perro Moto',
-                         monoposto: 'F1 Monoposto', endurance: 'Heiligen Endurance', barrel: 'Barrel Kart', longframe: 'Twin-Engine Longframe', sofa: 'The Sofa' };
+                         monoposto: 'F1 Monoposto', endurance: 'Heiligen Endurance', barrel: 'Barrel Kart', longframe: 'Twin-Engine Longframe', sofa: 'The Sofa',
+                         berlina: 'Enginos Berlina M', bavaria: 'Enginos Bavaria GT', piccola: 'Enginos Piccola 02',
+                         duke: 'Houndsborough Duke', chief: 'Houndsborough Chief',
+                         sturm: 'Heiligen Sturm', wald: 'Heiligen Wald',
+                         stallion: 'Norte Stallion GT3', potro: 'Norte Potro',
+                         garra: 'Granada Garra', flecha: 'Granada Flecha',
+                         anvil: 'Braewick Anvil', torr: 'Braewick Torr',
+                         tamsau: 'Đồi Tám-Sáu', trau: 'Đồi Trâu', babanh: 'Đồi Ba Bánh',
+                         tahti: 'Hilja Tähti', lumi: 'Hilja Lumi', siipi: 'Hilja Siipi',
+                         shopkart: 'Shopping Kart' };
 // The chassis spec sheets (1-10, hand-authored — these are REAL: aero feeds drag,
 // weight feeds accel, agility feeds grip, tough feeds crash damage; trunk is the
 // physical spares space the coming parts-logistics uses. Honesty law: no fake bars.)
@@ -27,6 +39,26 @@ const CHASSIS_STATS = {
   barrel:    { aero: 1,  weight: 4,  agility: 5,  tough: 6, trunk: 10 },  // it IS a trunk
   longframe: { aero: 5,  weight: 8,  agility: 1,  tough: 4, trunk: 2 },
   sofa:      { aero: 1,  weight: 6,  agility: 3,  tough: 5, trunk: 9 },   // under the cushions
+  berlina:   { aero: 6,  weight: 6,  agility: 6,  tough: 6, trunk: 6 },   // the all-rounder
+  bavaria:   { aero: 7,  weight: 7,  agility: 5,  tough: 6, trunk: 6 },
+  piccola:   { aero: 5,  weight: 4,  agility: 7,  tough: 4, trunk: 4 },
+  duke:      { aero: 3,  weight: 9,  agility: 3,  tough: 8, trunk: 9 },
+  chief:     { aero: 3,  weight: 9,  agility: 3,  tough: 8, trunk: 8 },
+  sturm:     { aero: 5,  weight: 5,  agility: 8,  tough: 6, trunk: 5 },
+  wald:      { aero: 4,  weight: 6,  agility: 5,  tough: 7, trunk: 8 },
+  stallion:  { aero: 8,  weight: 6,  agility: 7,  tough: 5, trunk: 2 },
+  potro:     { aero: 5,  weight: 7,  agility: 5,  tough: 6, trunk: 5 },
+  garra:     { aero: 8,  weight: 3,  agility: 8,  tough: 3, trunk: 2 },
+  flecha:    { aero: 9,  weight: 4,  agility: 6,  tough: 3, trunk: 3 },
+  anvil:     { aero: 6,  weight: 6,  agility: 6,  tough: 6, trunk: 8 },
+  torr:      { aero: 7,  weight: 5,  agility: 8,  tough: 4, trunk: 2 },
+  tamsau:    { aero: 4,  weight: 3,  agility: 8,  tough: 4, trunk: 4 },
+  trau:      { aero: 3,  weight: 8,  agility: 4,  tough: 9, trunk: 9 },
+  babanh:    { aero: 1,  weight: 2,  agility: 9,  tough: 3, trunk: 6 },
+  tahti:     { aero: 6,  weight: 8,  agility: 4,  tough: 7, trunk: 7 },
+  lumi:      { aero: 2,  weight: 8,  agility: 4,  tough: 9, trunk: 8 },
+  siipi:     { aero: 6,  weight: 5,  agility: 6,  tough: 5, trunk: 4 },
+  shopkart:  { aero: 1,  weight: 1,  agility: 10, tough: 2, trunk: 10 }, // it IS a basket
 };
 window.CHASSIS_STATS = CHASSIS_STATS;
 const WHEEL_STYLES = ['sport', 'classic', 'deep', 'offroad', 'neon'];
@@ -43,8 +75,11 @@ const KIT = (() => {
   return { chassis: map[legacy] || 'gt', paint: 0, wheels: 'sport', decal: 'stripes' };
 })();
 function saveKit() { localStorage.setItem('apex_kit', JSON.stringify(KIT)); }
+const AI_POOL = ['gt', 'muscle', 'rally', 'formula', 'truck',           // the daily-driver grid
+                 'berlina', 'bavaria', 'piccola', 'duke', 'chief', 'sturm', 'wald',
+                 'stallion', 'potro', 'garra', 'anvil', 'torr', 'tamsau', 'trau', 'tahti', 'lumi', 'siipi'];
 function randomKit() {
-  return { chassis: CHASSIS[Math.floor(Math.random() * 5)],            // AI stick to 4-wheelers mostly
+  return { chassis: AI_POOL[Math.floor(Math.random() * AI_POOL.length)],
            paint: Math.floor(Math.random() * PAINTS.length),
            wheels: WHEEL_STYLES[Math.floor(Math.random() * WHEEL_STYLES.length)],
            decal: DECALS[Math.floor(Math.random() * DECALS.length)] };

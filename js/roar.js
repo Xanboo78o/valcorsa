@@ -157,6 +157,26 @@
     barrel:    { s: 'eng4', lo: 0.80, hi: 2.00, fMul: 1.70, sub: 0.20, bright: 1900, turbo: 0 },   // clatter in a cask
     longframe: { s: 'eng0', lo: 0.48, hi: 1.50, fMul: 0.80, sub: 0.80, bright: 800,  turbo: 1 },   // TWO of them
     sofa:      { s: 'eng1', lo: 0.44, hi: 1.20, fMul: 0.58, sub: 0.60, bright: 500,  turbo: 0 },   // upholstered putt-putt
+    berlina:   { s: 'eng2', lo: 0.56, hi: 1.65, fMul: 0.95, sub: 0.48, bright: 1150, turbo: 1 },   // Enginos straight-six snarl
+    bavaria:   { s: 'eng2', lo: 0.52, hi: 1.55, fMul: 0.85, sub: 0.52, bright: 1000, turbo: 1 },
+    piccola:   { s: 'eng4', lo: 0.66, hi: 1.9,  fMul: 1.30, sub: 0.3,  bright: 1400, turbo: 0 },
+    duke:      { s: 'eng0', lo: 0.46, hi: 1.35, fMul: 0.78, sub: 0.7,  bright: 750,  turbo: 0 },   // lazy landau V8
+    chief:     { s: 'eng0', lo: 0.46, hi: 1.35, fMul: 0.80, sub: 0.65, bright: 800,  turbo: 1 },
+    sturm:     { s: 'eng3', lo: 0.58, hi: 1.85, fMul: 1.15, sub: 0.42, bright: 1450, turbo: 1.5 }, // the boxer thrum
+    wald:      { s: 'eng3', lo: 0.55, hi: 1.7,  fMul: 0.95, sub: 0.45, bright: 1250, turbo: 1.2 },
+    stallion:  { s: 'eng0', lo: 0.55, hi: 1.7,  fMul: 1.05, sub: 0.5,  bright: 1100, turbo: 0 },   // race V8, straight pipes
+    potro:     { s: 'eng0', lo: 0.5,  hi: 1.5,  fMul: 0.92, sub: 0.58, bright: 950,  turbo: 0 },
+    garra:     { s: 'eng2', lo: 0.6,  hi: 1.9,  fMul: 1.25, sub: 0.38, bright: 1600, turbo: 1.5 },
+    flecha:    { s: 'eng2', lo: 0.6,  hi: 1.95, fMul: 1.2,  sub: 0.4,  bright: 1550, turbo: 1.3 },
+    anvil:     { s: 'eng3', lo: 0.56, hi: 1.8,  fMul: 1.05, sub: 0.45, bright: 1350, turbo: 1.4 }, // five-cylinder warble
+    torr:      { s: 'eng5', lo: 0.62, hi: 2.1,  fMul: 1.35, sub: 0.3,  bright: 2200, turbo: 0 },   // the V10
+    tamsau:    { s: 'eng4', lo: 0.7,  hi: 2.05, fMul: 1.45, sub: 0.24, bright: 1800, turbo: 0 },   // 8600 rpm of joy
+    trau:      { s: 'eng1', lo: 0.46, hi: 1.3,  fMul: 0.75, sub: 0.6,  bright: 650,  turbo: 1 },
+    babanh:    { s: 'eng4', lo: 0.8,  hi: 2.2,  fMul: 1.9,  sub: 0.1,  bright: 2000, turbo: 0 },   // two-stroke tuk
+    tahti:     { s: 'eng2', lo: 0.5,  hi: 1.45, fMul: 0.8,  sub: 0.55, bright: 900,  turbo: 1 },   // hushed
+    lumi:      { s: 'eng1', lo: 0.46, hi: 1.3,  fMul: 0.72, sub: 0.65, bright: 700,  turbo: 1 },
+    siipi:     { s: 'eng2', lo: 0.52, hi: 1.6,  fMul: 0.9,  sub: 0.5,  bright: 1000, turbo: 0 },   // chrome-era song
+    shopkart:  { s: 'eng4', lo: 0.85, hi: 2.3,  fMul: 2.0,  sub: 0.08, bright: 2300, turbo: 0 },   // weed-whacker
   };
   // The GT bank: one real V8 (Adam's Ford GT reference) sliced into steady-RPM
   // loops — the sim-racer way (Assetto/iRacing: crossfade recorded loops by rpm,
