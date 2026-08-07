@@ -87,9 +87,9 @@ window.ECON = (() => {
       <div id="aisleRow">${PART_FAMILIES.map(f =>
         `<button data-fam="${f}">${fi(f)}<span>${f}</span></button>`).join('')}</div>
       <div id="packShelf"><span class="dealTag">PARTSPACKS</span>${SPONSORS.map(s => `
-        <button class="sponsorCard" data-sponsor="${s.id}">
+        <span class="packDuo"><button class="sponsorCard" data-sponsor="${s.id}">
           <b>${s.name}</b><span>${s.tag}</span><em>₡${s.cost}</em>
-        </button>`).join('')}
+        </button><button class="rip10" data-sponsor10="${s.id}">RIP ×10<em>₡${s.cost * 10}</em></button></span>`).join('')}
       </div>
       <div id="storeGrid"></div>
       <p class="setNote invHead">— YOUR SHELVES —</p>
@@ -145,16 +145,19 @@ window.ECON = (() => {
   }
 
   // ---- pack opening ceremony ----
-  function openPack(sponsorId, free) {
+  function openPack(sponsorId, free, count = 1) {
     const s = SPONSORS.find(x => x.id === sponsorId);
     if (!free) {
-      if (money() < s.cost) { toast('Not enough Corsas — go race!'); return; }
-      setMoney(money() - s.cost);
+      const afford = Math.floor(money() / s.cost);
+      if (afford < 1) { toast('Not enough Corsas — go race!'); return; }
+      count = Math.min(count, afford, 10);                 // "up to 10" means up to 10
+      if (count > 1) toast('RIPPING ×' + count);
+      setMoney(money() - s.cost * count);
     }
-    const pulls = Array.from({ length: s.pulls }, () => rollPart(s));
+    const pulls = Array.from({ length: s.pulls * count }, () => rollPart(s));
     const ov = document.createElement('div');
     ov.id = 'packReveal';
-    ov.innerHTML = `<div class="packWrap"><div class="packArt">${s.name}<span>PARTSPACK</span></div><div class="pullRow"></div>
+    ov.innerHTML = `<div class="packWrap"><div class="packArt">${s.name}<span>${count > 1 ? '×' + count + ' PARTSPACKS' : 'PARTSPACK'}</span></div><div class="pullRow"></div>
       <button id="packDone" style="display:none">SWEET</button></div>`;
     document.body.appendChild(ov);
     const art = ov.querySelector('.packArt'), row = ov.querySelector('.pullRow');
@@ -179,7 +182,7 @@ window.ECON = (() => {
             setTimeout(() => document.body.classList.remove('shake'), 350);
           }
           if (i === pulls.length - 1) $$('packDone').style.display = '';
-        }, i * 420));
+        }, i * (count > 1 ? 70 : 420)));   // bulk rips reveal at speed
       }, 380);
     };
     $$('packDone') && ($$('packDone').onclick = null);
@@ -194,6 +197,7 @@ window.ECON = (() => {
     m.innerHTML = shopHTML();
     document.body.appendChild(m);
     m.querySelectorAll('[data-sponsor]').forEach(b => b.onclick = () => openPack(b.dataset.sponsor));
+    m.querySelectorAll('[data-sponsor10]').forEach(b => b.onclick = () => openPack(b.dataset.sponsor10, false, 10));
     m.querySelectorAll('[data-fam]').forEach(b => b.onclick = () => {
       curFam = b.dataset.fam;
       m.querySelectorAll('[data-fam]').forEach(x => x.classList.toggle('sel', x === b));

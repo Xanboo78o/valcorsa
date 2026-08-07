@@ -2096,3 +2096,11 @@ body.tabsOn #teamsScreen .tmScroll { padding-bottom: 90px; }
   border: 1.5px solid #2e6bff !important; font-weight: 800; }
 .clOpts button.right { background: rgba(46,157,99,.35) !important; border-color: #2e9d63 !important; }
 .clOpts button.wrong { background: rgba(199,58,44,.35) !important; border-color: #c73a2c !important; }
+
+/* ---- RIP x10: bulk pack opening ---- */
+.packDuo { display: inline-flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+.storeFront .rip10 { min-width: 0 !important; padding: 4px 10px !important; font-size: 10px !important;
+  display: flex; gap: 6px; align-items: center; justify-content: center;
+  background: rgba(8,14,30,.82) !important; border: 1.5px solid #2e6bff !important; color: #eef3ff !important; }
+.storeFront .rip10 em { font-style: normal; color: #ff8c1a; font-weight: 700; }
+#packReveal .packWrap { max-height: 92dvh; overflow-y: auto; }
