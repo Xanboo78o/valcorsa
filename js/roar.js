@@ -509,7 +509,7 @@
   let amb = null, prevState = '', cheerCd = 0, finaleArmed = true;
   function buildAmb() {
     amb = {};
-    if (S.crowd) {
+    if (S.crowd && !(typeof track !== 'undefined' && track && track.def && track.def.silent)) {   // Hiljaisuus: no crowd at all
       const src = ctx.createBufferSource(); src.buffer = S.crowd; src.loop = true;
       const g = ctx.createGain(); g.gain.value = 0;
       const pan = ctx.createPanner();

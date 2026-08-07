@@ -196,6 +196,31 @@ const TRACKS = [
     ],
   },
   {
+    // FORGE 3 of 32 — 10-Q session. The Finnish frozen interior enters the map.
+    // The anti-Puentes: no crowd, no show — the introvert's cathedral.
+    id: 'hiljaisuus',
+    name: 'Hiljaisuus',
+    mode: 'F1',
+    desc: 'The Silence. Cold perfect asphalt through the frozen forest, snow walls, no crowd — just you, the trees, and Järvi waiting at the lake. The only venue where you hear your tires think.',
+    width: 22,
+    hills: 0.15,
+    surface: 'asphalt',
+    env: 'taiga',
+    laps: 3,
+    walls: true,
+    silent: true,                                    // zero crowd audio — the venue IS the quiet
+    points: [
+      [0, 0, 0], [150, 10, 1], [300, -10, 2],
+      [430, -60, 3],                                  // into the trees
+      [520, -150, 4], [480, -250, 5], [560, -340, 5], // the forest esses
+      [600, -500, 4], [620, -660, 3],                 // the long dark straight (the Cathedral run)
+      [560, -760, 2], [600, -830, 2], [520, -890, 2], // JÄRVI — the frozen lake chicane
+      [380, -920, 3], [220, -880, 4],                 // lake shore return
+      [120, -780, 5], [160, -660, 6], [80, -560, 6], [130, -440, 5],  // spruce esses north
+      [60, -320, 4], [110, -200, 3], [40, -90, 1],    // the quiet run home
+    ],
+  },
+  {
     // FORGE 1 of 32 — 10-Q session (TRACKS-QA.md). The rally school.
     id: 'hennenhof',
     name: 'Hennenhof',

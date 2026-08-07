@@ -80,6 +80,7 @@ const ENVS = {
   city:   { ground: 0x6a707a, ground2: 0x585e68, sky: 0xc2cee0, top: 0x6a7a94, horizon: 0xd4dde8, fog: 1300, scatter: 'buildings', dense: 0.5 },
   // rural New Hampshire: patchwork fields, forest, scattered farms, a river. Composite scatter.
   countryside: { ground: 0x6fae43, ground2: 0x548a31, sky: 0x9fd2ff, top: 0x2f74cf, horizon: 0xcfe8ff, fog: 2100, scatter: 'countryside', dense: 1.15 },
+  taiga: { ground: 0xe4ebf2, ground2: 0xcfd9e4, sky: 0xdfe9f4, top: 0x8fa8c4, horizon: 0xeef4fa, fog: 900, scatter: 'trees', dense: 1.9 },   // the frozen interior: snow ground, close fog, wall-to-wall spruce
   oval:   { ground: 0x62ab3e, ground2: 0x4d8a30, sky: 0x9fd2ff, top: 0x2f74cf, horizon: 0xcfe8ff, fog: 2000, scatter: 'stands', dense: 0.7 },
 };
 

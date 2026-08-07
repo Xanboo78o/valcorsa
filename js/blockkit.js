@@ -1,88 +1,89 @@
-/* VALCORSA — BLOCKKIT: the chassis, rebuilt Trailmakers-style (Adam's technique).
-   Bodies are assembled from a small block vocabulary — cube, wedge, quarter-curve —
-   and WELDED (merged) into one mesh per material. No lofted CAD surfaces: every
-   chassis reads as a machine built from blocks, which is also exactly the language
-   the Engineer Garage will speak later. Engineers don't make chassis — we do, here.
-   Zero carfactory.js edits: this file swaps the CHASSIS_BUILDERS entries in place.
-   Wheels arrays, lamp hookups (mats._head/_tail) and dims match the originals. */
+/* VALCORSA — BLOCKKIT v2: the toy cars, sculpted (Adam's Trailmakers technique).
+   Overrides buildToyCar (the REAL car pipeline — buildKitMesh calls it directly).
+   The craft, from studying Trailmakers builds:
+     1. slopes come in families — LONG SHALLOW wedges for hoods, steeper for glass
+     2. curves are rationed — one obvious rounded moment per car (the seat hump)
+     3. wheel wells — arch fenders that wrap the wheels, a whisker wider than the body
+   Bodies weld (merge) into one mesh per material; wheels/lamps/riders keep the
+   original toy contract so steering, spinning, brake glow and ink outlines all work. */
 'use strict';
 (function () {
   const MU = window.FX.BufferGeometryUtils;
 
   // ---- the vocabulary ----
-  let _cube = null, _wedge = null, _curve = null;
+  let _cube = null, _wedge = null, _curve = null, _arch = null;
   function cubeGeo() { return _cube || (_cube = new THREE.BoxGeometry(1, 1, 1)); }
-  function wedgeGeo() {                       // right prism: full height at -Z, zero at +Z
+  function wedgeGeo() {                       // prism: full height at -Z, zero at +Z (scale sy/sz = any slope)
     if (_wedge) return _wedge;
     const p = [], n = [], idx = [];
     const v = [
-      [-0.5, -0.5,  0.5], [0.5, -0.5,  0.5],                      // nose base
-      [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5],                      // tail base
-      [-0.5,  0.5, -0.5], [0.5,  0.5, -0.5],                      // tail top
+      [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5],
+      [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5],
+      [-0.5, 0.5, -0.5], [0.5, 0.5, -0.5],
     ];
-    function quad(a, b, c, d, nx, ny, nz) {
+    function face(list, nx, ny, nz, flip) {
       const s = p.length / 3;
-      for (const i of [a, b, c, d]) { p.push(...v[i]); n.push(nx, ny, nz); }
-      idx.push(s, s + 1, s + 2, s, s + 2, s + 3);
+      for (const i of list) { p.push(...v[i]); n.push(nx, ny, nz); }
+      if (list.length === 4) idx.push(s, s + (flip ? 2 : 1), s + (flip ? 1 : 2), s, s + (flip ? 3 : 2), s + (flip ? 2 : 3));
+      else idx.push(s, s + (flip ? 2 : 1), s + (flip ? 1 : 2));
     }
-    function tri(a, b, c, nx, ny, nz) {
-      const s = p.length / 3;
-      for (const i of [a, b, c]) { p.push(...v[i]); n.push(nx, ny, nz); }
-      idx.push(s, s + 1, s + 2);
-    }
-    const sl = Math.hypot(1, 1);
-    quad(0, 2, 3, 1, 0, -1, 0);                                    // bottom
-    quad(4, 2, 3, 5, 0, 0, -1); idx.splice(-6, 6, ...(() => { const s = p.length / 3 - 4; return [s, s + 2, s + 1, s, s + 3, s + 2]; })());
-    quad(0, 1, 5, 4, 0, 1 / sl, 1 / sl);                           // the slope
-    tri(0, 4, 2, -1, 0, 0);                                        // left cap
-    tri(1, 3, 5, 1, 0, 0);                                         // right cap
+    const sl = Math.SQRT1_2;
+    face([0, 2, 3, 1], 0, -1, 0, false);       // bottom
+    face([4, 5, 3, 2], 0, 0, -1, false);       // tail (vertical)
+    face([0, 1, 5, 4], 0, sl, sl, false);      // the slope
+    face([0, 4, 2], -1, 0, 0, false);          // caps
+    face([1, 3, 5], 1, 0, 0, false);
     _wedge = new THREE.BufferGeometry();
     _wedge.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
     _wedge.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3));
     _wedge.setIndex(idx);
     return _wedge;
   }
-  function curveGeo() {                       // quarter-round: flat bottom + back, faceted arc to the top
+  function curveGeo() {                       // quarter-round: crisp everywhere, curved on one shoulder
     if (_curve) return _curve;
     const s = new THREE.Shape();
     s.moveTo(-0.5, -0.5);
     s.lineTo(0.5, -0.5);
     s.absarc(-0.5, -0.5, 1, 0, Math.PI / 2, false);
     s.closePath();
-    const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false, curveSegments: 5 });
+    const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false, curveSegments: 6 });
     g.translate(0, 0, -0.5);
-    g.rotateY(Math.PI / 2);                   // extrusion runs along X (block width)
+    g.rotateY(Math.PI / 2);
     _curve = g;
     return _curve;
   }
-  let _arch = null;
-  function archGeo() {                        // fender block: slab with a semicircular wheel well.
-    if (_arch) return _arch;                  // origin sits AT THE AXLE: place it at the wheel center.
+  function archGeo() {                        // fender: slab with the wheel well. ORIGIN AT THE AXLE.
+    if (_arch) return _arch;
     const s = new THREE.Shape();
-    s.moveTo(-0.55, 0);
+    s.moveTo(-0.62, -0.1);
+    s.lineTo(-0.44, -0.1);
     s.lineTo(-0.44, 0);
-    s.absarc(0, 0, 0.44, Math.PI, 0, true);   // the well
-    s.lineTo(0.55, 0);
-    s.lineTo(0.55, 0.62);
-    s.lineTo(-0.55, 0.62);
+    s.absarc(0, 0, 0.44, Math.PI, 0, true);
+    s.lineTo(0.44, -0.1);
+    s.lineTo(0.62, -0.1);
+    s.lineTo(0.62, 0.6);
+    s.lineTo(-0.62, 0.6);
     s.closePath();
-    const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false, curveSegments: 7 });
+    const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false, curveSegments: 8 });
     g.translate(0, 0, -0.5);
-    g.rotateY(Math.PI / 2);                   // width along X; profile runs along Z (car length)
+    g.rotateY(Math.PI / 2);
     _arch = g;
     return _arch;
   }
   const GEO = { c: cubeGeo, w: wedgeGeo, q: curveGeo, a: archGeo };
 
-  /* weld(): blocks -> one mesh per material. block = [type, mat, x, y, z, sx, sy, sz, ry, rz]
-     type: c cube / w wedge / q curve · ry/rz in quarter-turns (0-3). */
-  function weld(g, mats, blocks) {
+  /* weld: blocks -> ONE mesh per material. Geometries are normalized to
+     non-indexed position+normal so boxes and extrusions merge cleanly.
+     block = [type, matKey, x, y, z, sx, sy, sz, ry(quarter turns)] */
+  function weld(g, matMap, blocks) {
     const buckets = {};
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
     for (const b of blocks) {
-      const [t, mat, x, y, z, sx, sy, sz, ry, rz] = b;
-      const geo = GEO[t]().clone();
-      e.set((rz ? 0 : 0), (ry || 0) * Math.PI / 2, (rz || 0) * Math.PI / 2, 'YXZ');
+      const [t, mat, x, y, z, sx, sy, sz, ry] = b;
+      let geo = GEO[t]();
+      geo = geo.index ? geo.toNonIndexed() : geo.clone();
+      for (const key of Object.keys(geo.attributes)) if (key !== 'position' && key !== 'normal') geo.deleteAttribute(key);
+      e.set(0, (ry || 0) * Math.PI / 2, 0);
       q.setFromEuler(e);
       m4.compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(sx, sy, sz));
       geo.applyMatrix4(m4);
@@ -90,185 +91,210 @@
     }
     for (const key of Object.keys(buckets)) {
       const merged = MU.mergeGeometries(buckets[key], false);
-      const mesh = new THREE.Mesh(merged, mats[key]);
+      if (!merged) continue;
+      const mesh = new THREE.Mesh(merged, matMap[key]);
       mesh.castShadow = true;
       g.add(mesh);
     }
   }
-  function driver(g, mats, y, z, s) {
-    s = s || 1;
-    const torso = new THREE.Mesh(cubeGeo(), mats.suit);
-    torso.position.set(0, y, z); torso.scale.set(0.5 * s, 0.55 * s, 0.4 * s);
-    g.add(torso);
-    const helm = new THREE.Mesh(new THREE.SphereGeometry(0.27 * s, 14, 10), mats.helmet);
-    helm.position.set(0, y + 0.42 * s, z);
-    g.add(helm);
-  }
 
-  // ---- the seven, re-authored in blocks (wheels arrays: verbatim from the originals) ----
-  const B = {};
+  // ---- the override: same contract as the original buildToyCar ----
+  const HUBS = (typeof HUB_COLS !== 'undefined') ? HUB_COLS : [0xc8ccd4, 0xe8e2ce, 0xc9a13b, 0x3a3e46, 0x20f6e8];
+  window.buildToyCar = function (g, kit, helmetColor, headMats, tailMats) {
+    const vehicle = { formula: 'f1', truck: 'monster', gt: 'coupe', muscle: 'muscle' }[kit.chassis] || kit.chassis;
+    const paint = toonMat(PAINTS[kit.paint % PAINTS.length]);
+    const dark = toonMat(0x1c1e22);
+    const glass = glassMat();
+    const helmetMat = toonMat(helmetColor);
+    const wIdx = (typeof kit.wheels === 'number' ? kit.wheels : 0) % HUBS.length;
+    const hub = wIdx === 4
+      ? toonMat(0x20f6e8, { emissive: 0x20f6e8, emissiveIntensity: 1.2 })
+      : toonMat(HUBS[wIdx]);
+    const M = { paint, dark, glass };
+    const wheels = [];
 
-  B.gt = () => ({                             // Enginos GT v2: one big rectangle, sculpted —
-    // super subtle hood angle, ONE obvious curve (the seat-hump fastback), wrapped wheels.
-    wheels: [[-0.76, 1.5, 1, 0.36, 0.28], [0.76, 1.5, 1, 0.36, 0.28], [-0.76, -1.5, 0, 0.37, 0.3], [0.76, -1.5, 0, 0.37, 0.3]],
-    build(g, mats) {
-      weld(g, mats, [
-        ['c', 'dark', 0, 0.3, 0, 1.44, 0.16, 3.6],                 // inset rocker layer (panel line)
-        ['c', 'paint', 0, 0.58, 0, 1.52, 0.4, 3.9],                // THE big rectangle
-        ['w', 'paint', 0, 0.87, 1.17, 1.52, 0.18, 1.55],           // hood: super subtle angle (long, low)
-        ['c', 'paint', 0, 0.82, 1.93, 1.52, 0.13, 0.24],           // nose cap over the lights
-        ['w', 'glass', 0, 1.06, 0.42, 1.34, 0.36, 0.7],            // windshield: steeper family
-        ['c', 'paint', 0, 1.06, -0.22, 1.4, 0.36, 0.62],           // roof over the seats
-        ['q', 'paint', 0, 1.02, -0.78, 1.4, 0.44, 0.6, 2, 0],      // THE curve: seat-hump fastback
-        ['q', 'paint', 0, 0.84, -1.35, 1.52, 0.26, 0.55, 2, 0],    // second curve step down the deck
-        ['c', 'dark', 0, 0.9, -1.82, 1.46, 0.06, 0.26],            // ducktail blade
-        ['c', 'dark', 0, 0.42, -1.94, 1.34, 0.14, 0.12],           // diffuser
-        // wheel wells: fenders wrap all four, a whisker wider than the body
-        ['a', 'paint', -0.76, 0.37, 1.5, 0.36, 0.92, 0.92],
-        ['a', 'paint', 0.76, 0.37, 1.5, 0.36, 0.92, 0.92],
-        ['a', 'paint', -0.76, 0.38, -1.5, 0.38, 0.95, 0.95],
-        ['a', 'paint', 0.76, 0.38, -1.5, 0.38, 0.95, 0.95],
+    const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      m.rotation.set(rx, ry, rz);
+      m.castShadow = true;
+      g.add(m);
+      return m;
+    };
+    const lamp = (kind, x, y, z, w = 0.24, h = 0.12) => {
+      const mat = kind === 'head'
+        ? toonMat(0x2a2820, { emissive: 0xfff3d8, emissiveIntensity: 0 })
+        : toonMat(0x33120f, { emissive: 0xff2218, emissiveIntensity: 0 });
+      (kind === 'head' ? headMats : tailMats).push(mat);
+      add(new THREE.BoxGeometry(w, h, 0.06), mat, x, y, z);
+    };
+    const wheel = (x, z, front, r = 0.45, width = 0.44) => {
+      const wg = new THREE.Group();
+      const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, width, 12), dark);
+      w.rotation.z = Math.PI / 2; w.castShadow = true;
+      wg.add(w);
+      const hb = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.55, width + 0.02, 10), hub);
+      hb.rotation.z = Math.PI / 2;
+      w.add(hb);
+      wg.position.set(x, r, z);
+      wg.userData.front = !!front;
+      g.add(wg); wheels.push(wg);
+      return wg;
+    };
+    const rider = (z, lean) => {
+      add(new THREE.BoxGeometry(0.5, 0.6, 0.42), dark, 0, 0.62, z, lean || 0);
+      add(new THREE.SphereGeometry(0.28, 10, 8), helmetMat, 0, 1.0, z + (lean ? 0.18 : 0));
+    };
+
+    if (vehicle === 'coupe') {                // Enginos GT: the big rectangle, sculpted
+      weld(g, M, [
+        ['c', 'dark', 0, 0.3, 0, 1.76, 0.18, 4.06],                // inset rocker (panel line)
+        ['c', 'paint', 0, 0.58, 0, 1.9, 0.48, 4.2],                // THE rectangle
+        ['w', 'paint', 0, 0.92, 1.4, 1.9, 0.2, 1.55],              // hood: super subtle slope
+        ['c', 'paint', 0, 0.88, 2.02, 1.9, 0.12, 0.4],             // nose cap
+        ['c', 'dark', 0, 1.0, -0.3, 1.5, 0.32, 1.8],               // cabin core behind the glass
+        ['w', 'glass', 0, 1.18, 0.5, 1.6, 0.42, 0.95],             // raked windshield
+        ['c', 'paint', 0, 1.28, -0.42, 1.64, 0.26, 1.0],           // roof
+        ['q', 'paint', 0, 1.18, -1.2, 1.64, 0.46, 0.78],        // THE curve: seat-hump fastback
+        ['q', 'paint', 0, 0.84, -1.78, 1.9, 0.3, 0.5],          // curve step down the tail
+        ['c', 'dark', 0, 0.98, -2.02, 1.68, 0.07, 0.34],           // ducktail blade
+        ['a', 'paint', -0.95, 0.46, 1.4, 0.5, 1.12, 1.12],         // wheel wells, all four
+        ['a', 'paint', 0.95, 0.46, 1.4, 0.5, 1.12, 1.12],
+        ['a', 'paint', -0.95, 0.48, -1.4, 0.54, 1.16, 1.16],
+        ['a', 'paint', 0.95, 0.48, -1.4, 0.54, 1.16, 1.16],
       ]);
-      mirrors(g, mats, 0.8, 1.0, 0.72);
-      exhausts(g, mats, [-0.3, 0.3], 0.4, -1.96);
-      lampBar(g, mats, 'head', 1.98, 0.66, 1.15, 0.09);
-      lampBar(g, mats, 'tail', -1.96, 0.74, 1.25, 0.09);
-    },
-  });
+      lamp('head', -0.58, 0.7, 2.24); lamp('head', 0.58, 0.7, 2.24);
+      lamp('tail', -0.6, 0.72, -2.17, 0.42, 0.12); lamp('tail', 0.6, 0.72, -2.17, 0.42, 0.12);
+      wheel(-0.95, 1.4, 1, 0.46, 0.42); wheel(0.95, 1.4, 1, 0.46, 0.42);
+      wheel(-0.95, -1.4, 0, 0.48, 0.46); wheel(0.95, -1.4, 0, 0.48, 0.46);
 
-  B.muscle = () => ({                         // Houndsborough Iron: long hood, upright cab, wedge deck
-    wheels: [[-0.78, 1.62, 1, 0.37, 0.28], [0.78, 1.62, 1, 0.37, 0.28], [-0.78, -1.62, 0, 0.38, 0.32], [0.78, -1.62, 0, 0.38, 0.32]],
-    build(g, mats) {
-      weld(g, mats, [
-        ['c', 'paint', 0, 0.5, 0, 1.58, 0.42, 3.8],                // slab body
-        ['c', 'paint', 0, 0.86, 1.15, 1.58, 0.3, 1.35],            // the long hood
-        ['c', 'dark', 0, 1.03, 1.15, 0.44, 0.08, 0.9],             // hood scoop
-        ['w', 'glass', 0, 1.18, 0.28, 1.4, 0.38, 0.55],            // windshield
-        ['c', 'paint', 0, 1.18, -0.35, 1.46, 0.38, 0.75],          // cab
-        ['w', 'paint', 0, 1.18, -0.98, 1.46, 0.38, 0.5, 2],        // rear deck wedge (flipped)
-        ['c', 'paint', 0, 0.86, -1.45, 1.58, 0.3, 0.9],            // trunk
-        ['c', 'dark', 0, 0.62, 1.95, 1.5, 0.16, 0.14],             // front bumper bar
-        ['c', 'dark', 0, 0.62, -1.95, 1.5, 0.16, 0.14],            // rear bumper bar
+    } else if (vehicle === 'muscle') {        // Houndsborough Iron: long hood, upright cab
+      weld(g, M, [
+        ['c', 'dark', 0, 0.28, 0.1, 1.86, 0.18, 4.5],
+        ['c', 'paint', 0, 0.58, 0.1, 2.0, 0.52, 4.6],              // long low body
+        ['w', 'paint', 0, 0.94, 1.35, 2.0, 0.18, 1.8],             // subtle hood slope
+        ['c', 'dark', 0, 1.04, 1.2, 0.9, 0.14, 0.7],               // scoop ON the slope
+        ['c', 'dark', 0, 1.02, -0.5, 1.5, 0.34, 1.5],              // cabin core
+        ['w', 'glass', 0, 1.22, 0.32, 1.56, 0.44, 0.75],           // windshield
+        ['c', 'paint', 0, 1.3, -0.55, 1.6, 0.3, 1.1],              // roof
+        ['w', 'paint', 0, 1.2, -1.35, 1.6, 0.44, 0.75, 2],         // rear glassline wedge (flipped)
+        ['c', 'paint', 0, 0.9, -1.9, 2.0, 0.28, 0.7],              // trunk
+        ['c', 'dark', 0, 1.02, -2.2, 1.9, 0.08, 0.3],              // ducktail
+        ['c', 'dark', 0, 0.42, 2.35, 2.05, 0.2, 0.3],              // bumpers
+        ['c', 'dark', 0, 0.42, -2.3, 2.05, 0.2, 0.3],
+        ['a', 'paint', -1.02, 0.5, 1.5, 0.54, 1.2, 1.2],
+        ['a', 'paint', 1.02, 0.5, 1.5, 0.54, 1.2, 1.2],
+        ['a', 'paint', -1.02, 0.54, -1.5, 0.6, 1.28, 1.28],
+        ['a', 'paint', 1.02, 0.54, -1.5, 0.6, 1.28, 1.28],
       ]);
-      mirrors(g, mats, 0.8, 1.12, 0.6);
-      exhausts(g, mats, [-0.45, 0.45], 0.4, -1.95);
-      lampsQuad(g, mats, 'head', 0.5, 1.98, 0.22, 0.14, 0.82);
-      lampBar(g, mats, 'tail', -1.96, 0.92, 1.3, 0.1);
-    },
-  });
+      lamp('head', -0.62, 0.66, 2.42); lamp('head', 0.62, 0.66, 2.42);
+      lamp('tail', -0.65, 0.7, -2.37, 0.5, 0.12); lamp('tail', 0.65, 0.7, -2.37, 0.5, 0.12);
+      wheel(-1.02, 1.5, 1, 0.5, 0.46); wheel(1.02, 1.5, 1, 0.5, 0.46);
+      wheel(-1.02, -1.5, 0, 0.54, 0.52); wheel(1.02, -1.5, 0, 0.54, 0.52);
 
-  B.rally = () => ({                          // Heiligen Strada: chunky hatch, roof curve, mud lights
-    wheels: [[-0.76, 1.3, 1, 0.36, 0.28], [0.76, 1.3, 1, 0.36, 0.28], [-0.76, -1.28, 0, 0.36, 0.3], [0.76, -1.28, 0, 0.36, 0.3]],
-    build(g, mats) {
-      weld(g, mats, [
-        ['c', 'paint', 0, 0.5, 0, 1.54, 0.44, 3.1],                // tall slab body
-        ['w', 'paint', 0, 0.88, 1.28, 1.54, 0.32, 0.55],           // short hood wedge
-        ['w', 'glass', 0, 1.22, 0.55, 1.4, 0.4, 0.6],              // windshield
-        ['c', 'paint', 0, 1.22, -0.25, 1.46, 0.4, 1.0],            // boxy cabin
-        ['q', 'paint', 0, 1.22, -0.98, 1.46, 0.4, 0.45, 2, 0],     // hatch roof curve
-        ['c', 'dark', 0, 1.47, -0.9, 1.2, 0.07, 0.4],              // roof spoiler
-        ['c', 'dark', 0, 0.34, 1.6, 1.5, 0.18, 0.2],               // bash guard
-        ['c', 'dark', 0, 0.3, 0, 1.62, 0.12, 2.6],                 // rocker armor
+    } else if (vehicle === 'rally') {         // Heiligen Strada: box-flare hatch
+      weld(g, M, [
+        ['c', 'paint', 0, 0.6, 0, 1.9, 0.68, 4.0],                 // tall body
+        ['w', 'paint', 0, 1.06, 1.55, 1.9, 0.24, 0.9],             // stubby hood slope
+        ['c', 'dark', 0, 1.1, -0.15, 1.52, 0.4, 1.85],             // cabin core
+        ['w', 'glass', 0, 1.32, 0.68, 1.58, 0.44, 0.72],           // windshield
+        ['c', 'paint', 0, 1.42, -0.2, 1.66, 0.32, 1.15],           // roof
+        ['c', 'dark', 0, 1.62, 0.15, 0.5, 0.14, 0.42],             // roof scoop
+        ['q', 'paint', 0, 1.32, -0.98, 1.66, 0.42, 0.58],       // hatch curve
+        ['c', 'dark', 0, 1.46, -0.95, 1.5, 0.08, 0.45],            // roof spoiler blade
+        ['c', 'paint', -0.94, 1.12, -1.98, 0.1, 0.4, 0.5],         // spoiler struts
+        ['c', 'paint', 0.94, 1.12, -1.98, 0.1, 0.4, 0.5],
+        ['c', 'dark', 0, 1.28, -2.0, 2.0, 0.1, 0.5],               // big rear wing
+        ['c', 'dark', 0, 0.5, 2.05, 1.8, 0.24, 0.3],               // bash bar
+        ['a', 'dark', -1.0, 0.52, 1.45, 0.62, 1.28, 1.28],         // BOXY dark flares (rally!)
+        ['a', 'dark', 1.0, 0.52, 1.45, 0.62, 1.28, 1.28],
+        ['a', 'dark', -1.0, 0.52, -1.45, 0.62, 1.28, 1.28],
+        ['a', 'dark', 1.0, 0.52, -1.45, 0.62, 1.28, 1.28],
       ]);
-      // rally pod lights on the hood lip
-      lampsQuad(g, mats, 'head', 0.3, 1.55, 0.2, 0.16, 1.06);
-      lampBar(g, mats, 'tail', -1.58, 0.95, 1.25, 0.1);
-      mirrors(g, mats, 0.78, 1.16, 0.85);
-    },
-  });
+      lamp('head', -0.55, 0.86, 2.02); lamp('head', 0.55, 0.86, 2.02);
+      lamp('head', -0.2, 1.2, 1.98, 0.18, 0.14); lamp('head', 0.2, 1.2, 1.98, 0.18, 0.14);   // pod lights
+      lamp('tail', -0.6, 0.9, -2.02); lamp('tail', 0.6, 0.9, -2.02);
+      wheel(-1.0, 1.45, 1, 0.52, 0.5); wheel(1.0, 1.45, 1, 0.52, 0.5);
+      wheel(-1.0, -1.45, 0, 0.52, 0.5); wheel(1.0, -1.45, 0, 0.52, 0.5);
 
-  B.formula = () => ({                        // Enginos Volante F: needle tub, pods, wings
-    wheels: [[-1.02, 1.55, 1, 0.45, 0.44], [1.02, 1.55, 1, 0.45, 0.44], [-1.06, -1.55, 0, 0.47, 0.5], [1.06, -1.55, 0, 0.47, 0.5]],
-    build(g, mats) {
-      weld(g, mats, [
-        ['c', 'paint', 0, 0.52, 0.3, 0.66, 0.4, 2.4],              // the tub
-        ['w', 'paint', 0, 0.52, 1.85, 0.6, 0.4, 0.9],              // nose wedge
-        ['c', 'paint', 0, 0.34, 2.35, 2.1, 0.09, 0.5],             // front wing
-        ['w', 'paint', 0, 0.72, -0.62, 0.62, 0.34, 0.5, 2],        // headrest wedge (flipped)
-        ['c', 'paint', -0.72, 0.5, -0.45, 0.55, 0.36, 1.5],        // left sidepod
-        ['c', 'paint', 0.72, 0.5, -0.45, 0.55, 0.36, 1.5],         // right sidepod
-        ['q', 'paint', -0.72, 0.5, 0.35, 0.55, 0.36, 0.4, 0, 0],   // pod inlet curves
-        ['q', 'paint', 0.72, 0.5, 0.35, 0.55, 0.36, 0.4, 0, 0],
-        ['c', 'dark', -0.5, 1.0, -1.62, 0.1, 0.5, 0.12],           // wing pylons
-        ['c', 'dark', 0.5, 1.0, -1.62, 0.1, 0.5, 0.12],
-        ['c', 'paint', 0, 1.3, -1.62, 1.9, 0.1, 0.55],             // rear wing
-        ['c', 'dark', 0, 0.3, -1.1, 1.2, 0.14, 0.9],               // diffuser block
+    } else if (vehicle === 'bike') {          // Perro Moto: tank curve, tail wedge
+      weld(g, M, [
+        ['c', 'paint', 0, 0.7, -0.1, 0.34, 0.4, 1.55],             // spine
+        ['q', 'paint', 0, 0.94, 0.18, 0.38, 0.3, 0.6, 2],             // tank curve (faces forward)
+        ['w', 'paint', 0, 0.98, -0.75, 0.36, 0.28, 0.6],           // tail wedge
+        ['w', 'paint', 0, 0.72, 0.85, 0.48, 0.34, 0.5],            // front fairing slope
+        ['w', 'glass', 0, 1.0, 0.72, 0.32, 0.26, 0.32],            // screen
+        ['c', 'dark', 0, 0.94, -0.45, 0.4, 0.12, 0.8],             // seat
       ]);
-      driver(g, mats, 0.85, -0.15, 0.95);
-      lampBar(g, mats, 'tail', -1.9, 0.6, 0.5, 0.09);
-    },
-  });
+      add(new THREE.BoxGeometry(0.7, 0.05, 0.08), dark, 0, 1.0, 0.95);
+      add(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 6), dark, 0, 0.82, 0.9, Math.PI / 2.6);
+      add(new THREE.BoxGeometry(0.42, 0.7, 0.42), dark, 0, 1.05, -0.1, -0.5);
+      add(new THREE.SphereGeometry(0.27, 10, 8), helmetMat, 0, 1.35, 0.35);
+      add(new THREE.BoxGeometry(0.16, 0.5, 0.16), dark, -0.3, 1.0, 0.5, 0, 0, 0.5);
+      add(new THREE.BoxGeometry(0.16, 0.5, 0.16), dark, 0.3, 1.0, 0.5, 0, 0, -0.5);
+      lamp('head', 0, 0.7, 1.12, 0.18, 0.14); lamp('tail', 0, 0.9, -1.05, 0.16, 0.1);
+      wheel(0, 1.25, 1, 0.5, 0.24);
+      wheel(0, -1.25, 0, 0.5, 0.28);
 
-  B.truck = () => ({                          // Norte Titan: big rig energy on monster wheels
-    wheels: [[-1.22, 1.5, 1, 0.82, 0.72], [1.22, 1.5, 1, 0.82, 0.72], [-1.22, -1.5, 0, 0.82, 0.72], [1.22, -1.5, 0, 0.82, 0.72]],
-    build(g, mats) {
-      weld(g, mats, [
-        ['c', 'paint', 0, 1.12, 0, 1.9, 0.5, 3.6],                 // high slab frame
-        ['c', 'paint', 0, 1.62, 0.9, 1.9, 0.55, 1.5],              // hood block
-        ['q', 'paint', 0, 1.62, 1.7, 1.9, 0.55, 0.35, 0, 0],       // nose curve
-        ['w', 'glass', 0, 2.08, 0.15, 1.7, 0.5, 0.65],             // windshield wedge
-        ['c', 'paint', 0, 2.08, -0.6, 1.8, 0.5, 0.95],             // cab
-        ['c', 'paint', 0, 1.45, -1.35, 1.9, 0.6, 0.95],            // bed
-        ['c', 'dark', 0, 1.7, -1.35, 1.5, 0.2, 0.6],               // bed cargo hump
-        ['c', 'dark', 0, 0.86, 1.95, 1.96, 0.3, 0.22],             // bull bar
-        ['c', 'chrome', 0, 2.42, -0.28, 1.5, 0.06, 0.08],          // roof light bar
+    } else if (vehicle === 'monster') {       // Norte Titan: slab frame, wedge cab, curve nose
+      weld(g, M, [
+        ['c', 'dark', 0, 1.4, 0, 2.0, 0.5, 3.4],                   // frame
+        ['c', 'paint', 0, 1.88, 1.05, 2.0, 0.6, 1.5],              // hood block
+        ['q', 'paint', 0, 1.88, 1.75, 2.0, 0.6, 0.4, 2],              // curve nose
+        ['c', 'dark', 0, 2.1, -0.3, 1.62, 0.5, 1.35],              // cab core
+        ['w', 'glass', 0, 2.34, 0.42, 1.7, 0.5, 0.62],             // windshield wedge
+        ['c', 'paint', 0, 2.42, -0.35, 1.8, 0.4, 1.2],             // cab roof
+        ['w', 'paint', 0, 2.3, -1.1, 1.8, 0.42, 0.5, 2],           // cab rear wedge
+        ['c', 'paint', 0, 1.78, -1.65, 2.0, 0.7, 1.0],             // bed
+        ['c', 'dark', 0, 2.0, -1.65, 1.5, 0.24, 0.6],              // cargo hump
+        ['c', 'dark', 0, 1.55, 1.95, 2.1, 0.3, 0.3],               // bull bar
       ]);
-      lampsQuad(g, mats, 'head', 0.62, 2.0, 0.26, 0.18, 1.5);
-      lampBar(g, mats, 'tail', -1.86, 1.5, 1.6, 0.12);
-      exhausts(g, mats, [-0.95, 0.95], 2.2, -1.05);
-      mirrors(g, mats, 1.0, 2.2, 0.55);
-    },
-  });
+      add(new THREE.BoxGeometry(0.5, 0.2, 0.5), dark, 0, 2.72, 0.4);
+      for (const lx of [-0.5, 0, 0.5]) add(new THREE.SphereGeometry(0.14, 8, 6), toonMat(0xfff2b0), lx, 2.88, 0.4);
+      lamp('head', -0.6, 1.95, 1.98); lamp('head', 0.6, 1.95, 1.98);
+      lamp('tail', -0.7, 1.65, -2.18); lamp('tail', 0.7, 1.65, -2.18);
+      wheel(-1.15, 1.35, 1, 0.95, 0.8); wheel(1.15, 1.35, 1, 0.95, 0.8);
+      wheel(-1.15, -1.35, 0, 0.95, 0.8); wheel(1.15, -1.35, 0, 0.95, 0.8);
 
-  B.kart = () => ({                           // Granada Sprint: bare-bones block kart, driver in the wind
-    wheels: [[-0.72, 0.95, 1, 0.33, 0.32], [0.72, 0.95, 1, 0.33, 0.32], [-0.78, -0.95, 0, 0.39, 0.44], [0.78, -0.95, 0, 0.39, 0.44]],
-    build(g, mats) {
-      weld(g, mats, [
-        ['c', 'paint', 0, 0.34, 0.15, 0.95, 0.18, 2.2],            // floor plank
-        ['w', 'paint', 0, 0.52, 1.15, 0.9, 0.24, 0.5],             // nose wedge
-        ['c', 'paint', 0, 0.34, 0.15, 1.7, 0.14, 0.6],             // side bumper spar
-        ['c', 'dark', 0, 0.62, -0.55, 0.62, 0.5, 0.5],             // seat box
-        ['w', 'dark', 0, 1.0, -0.72, 0.6, 0.3, 0.3, 2],            // seat back wedge
-        ['c', 'dark', 0.5, 0.5, -0.95, 0.42, 0.34, 0.5],           // engine block
-        ['q', 'dark', -0.4, 0.5, -0.95, 0.4, 0.3, 0.3, 0, 0],      // airbox curve
+    } else if (vehicle === 'kart') {          // Granada Sprint: plank + subtle nose
+      weld(g, M, [
+        ['c', 'paint', 0, 0.2, 0, 1.15, 0.16, 2.5],                // plank
+        ['w', 'paint', 0, 0.34, 1.05, 1.0, 0.14, 0.55],            // subtle nose wedge
+        ['c', 'dark', 0, 0.22, 1.35, 1.25, 0.12, 0.5],             // front bumper
+        ['c', 'paint', 0, 0.45, -0.2, 0.9, 0.5, 0.7],              // seat box
+        ['q', 'paint', 0, 0.72, -0.5, 0.8, 0.28, 0.32],         // seat-back curve (the hump!)
+        ['c', 'dark', 0.5, 0.42, -1.05, 0.5, 0.4, 0.55],           // engine
+        ['q', 'dark', -0.42, 0.4, -1.05, 0.44, 0.3, 0.32],         // airbox curve
       ]);
-      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.7, 6), mats.dark);
-      col.position.set(0, 0.62, 0.62); col.rotation.x = Math.PI / 3; g.add(col);
-      const sw = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.035, 8, 14), mats.dark);
-      sw.position.set(0, 0.8, 0.82); sw.rotation.x = Math.PI / 2.4; g.add(sw);
-      driver(g, mats, 0.72, -0.25, 1);
-      lampBar(g, mats, 'tail', -1.28, 0.34, 0.5, 0.08);
-    },
-  });
+      add(new THREE.CylinderGeometry(0.02, 0.02, 0.7, 6), dark, 0, 0.62, 0.75, Math.PI / 3);
+      add(new THREE.TorusGeometry(0.22, 0.04, 6, 10), dark, 0, 0.78, 0.95, Math.PI / 2.4);
+      rider(-0.1);
+      wheel(-0.72, 0.95, 1, 0.34, 0.3); wheel(0.72, 0.95, 1, 0.34, 0.3);
+      wheel(-0.78, -0.95, 0, 0.4, 0.42); wheel(0.78, -0.95, 0, 0.4, 0.42);
 
-  B.bike = () => ({                           // Perro Moto: one block wide, curve tank, wedge tail
-    wheels: [[0, 1.25, 1, 0.5, 0.26], [0, -1.25, 0, 0.5, 0.32]],
-    build(g, mats) {
-      weld(g, mats, [
-        ['c', 'paint', 0, 0.6, 0, 0.34, 0.34, 1.7],                // spine
-        ['q', 'paint', 0, 0.86, 0.15, 0.36, 0.3, 0.55, 0, 0],      // tank curve
-        ['w', 'paint', 0, 0.86, -0.62, 0.36, 0.26, 0.55],          // tail wedge... nose-forward
-        ['w', 'paint', 0, 0.72, 0.72, 0.44, 0.3, 0.4],             // front fairing wedge
-        ['w', 'glass', 0, 0.98, 0.68, 0.32, 0.24, 0.3],            // screen
-        ['c', 'dark', 0, 0.92, -0.5, 0.36, 0.1, 0.7],              // seat slab
+    } else {                                  // 'f1' — Enginos Volante: needle + pods + wings
+      weld(g, M, [
+        ['c', 'paint', 0, 0.42, -0.1, 1.5, 0.42, 3.4],             // wide floor
+        ['w', 'paint', 0, 0.68, 0.8, 0.66, 0.26, 1.6],             // LONG subtle nose slope
+        ['c', 'paint', 0, 0.44, 2.1, 0.6, 0.26, 1.4],              // nose tip beam
+        ['c', 'dark', 0, 0.3, 2.8, 2.1, 0.09, 0.62],               // front wing
+        ['w', 'dark', 0, 0.42, 2.45, 2.06, 0.1, 0.3],              // wing flap slope
+        ['c', 'paint', 0, 0.76, -1.0, 0.9, 0.5, 1.5],              // engine cover
+        ['q', 'paint', 0, 0.9, -0.35, 0.72, 0.5, 0.62],         // headrest curve behind driver
+        ['q', 'paint', -0.62, 0.6, 0.1, 0.5, 0.36, 0.5, 2],           // sidepod inlet curves
+        ['q', 'paint', 0.62, 0.6, 0.1, 0.5, 0.36, 0.5, 2],
+        ['c', 'paint', -0.98, 0.45, -0.5, 0.5, 0.4, 1.7],          // sidepods
+        ['c', 'paint', 0.98, 0.45, -0.5, 0.5, 0.4, 1.7],
+        ['c', 'dark', 0, 1.06, -2.1, 1.8, 0.09, 0.55],             // rear wing
+        ['c', 'dark', -0.82, 0.82, -2.1, 0.08, 0.5, 0.55],         // endplates
+        ['c', 'dark', 0.82, 0.82, -2.1, 0.08, 0.5, 0.55],
+        ['c', 'dark', 0, 0.72, 0.55, 0.7, 0.28, 0.7],              // cockpit surround
       ]);
-      for (const sx of [-0.09, 0.09]) {
-        const fork = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.032, 0.85, 8), mats.chrome);
-        fork.position.set(sx, 0.8, 0.95); fork.rotation.x = Math.PI / 2.6; g.add(fork);
-      }
-      const bars = new THREE.Mesh(cubeGeo(), mats.dark);
-      bars.position.set(0, 1.04, 0.9); bars.scale.set(0.7, 0.05, 0.07); g.add(bars);
-      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.75, 8), mats.chrome);
-      pipe.position.set(0.16, 0.42, -0.6); pipe.rotation.x = Math.PI / 2.15; g.add(pipe);
-      const torso = new THREE.Mesh(cubeGeo(), mats.suit);
-      torso.position.set(0, 1.07, -0.12); torso.scale.set(0.42, 0.66, 0.42); torso.rotation.x = -0.5; g.add(torso);
-      const helm = new THREE.Mesh(new THREE.SphereGeometry(0.27, 14, 10), mats.helmet);
-      helm.position.set(0, 1.36, 0.34); g.add(helm);
-      lampsQuad(g, mats, 'head', 0, 0.78, 0.2, 0.14, 1.06);
-      lampBar(g, mats, 'tail', -1.04, 0.98, 0.18, 0.08);
-    },
-  });
-
-  // ---- swap the builders in place (shared script scope; carfactory keeps everything else) ----
-  for (const key of Object.keys(B)) CHASSIS_BUILDERS[key] = B[key];
+      add(new THREE.SphereGeometry(0.3, 10, 8), helmetMat, 0, 0.86, 0.35);
+      lamp('tail', 0, 0.85, -2.35, 0.2, 0.2);
+      wheel(-1.02, 1.55, 1); wheel(1.02, 1.55, 1);
+      wheel(-1.06, -1.55, 0); wheel(1.06, -1.55, 0);
+    }
+    return wheels;
+  };
 })();
