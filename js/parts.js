@@ -36,6 +36,10 @@ window.PARTS = (() => {
       heat: Math.round(v(b + name + 'h', 2, 9)),
       reliability: Math.round(v(name + b + 'r', 4, 10)),
     }, note);
+  // THE STANDARDIZATION ACT (DESIGN §6.6): pre-standard engines are retired.
+  // They stay in PARTS so prices/refunds resolve, but the store won't sell them,
+  // packs won't pull them, and karts can't run them. Real engines: js/enginecat.js.
+  for (const p of P) p.legacy = true;   // everything added so far = the old engines
 
   // ---- TIRES ----
   const TB = ['Valgrip', 'Södergummi', 'El Pulpo'];

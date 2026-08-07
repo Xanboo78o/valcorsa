@@ -36,10 +36,10 @@ window.ECON = (() => {
       return { card: chs[Math.floor(Math.random() * chs.length)] };
     }
     const rar = rollRarity(sponsor.odds);
-    let pool = PARTS.filter(p => p.rarity === rar && p.fam !== 'Chassis');
+    let pool = PARTS.filter(p => !p.legacy && p.rarity === rar && p.fam !== 'Chassis');
     if (sponsor.trashBias && rar === 'common' && Math.random() < 0.6)
-      pool = PARTS.filter(p => p.fam === 'Consumables');
-    if (!pool.length) pool = PARTS.filter(p => p.rarity === 'common');
+      pool = PARTS.filter(p => !p.legacy && p.fam === 'Consumables');
+    if (!pool.length) pool = PARTS.filter(p => !p.legacy && p.rarity === 'common');
     return { part: pool[Math.floor(Math.random() * pool.length)] };
   }
 
@@ -81,7 +81,8 @@ window.ECON = (() => {
   function renderStore() {
     const q = ($$('partSearch').value || '').toLowerCase();
     const my = inv(), cd = cards();
-    const list = PARTS.filter(p => (q ? (p.name + p.brand + p.fam).toLowerCase().includes(q) : p.fam === curFam));
+    const list = PARTS.filter(p => !p.legacy &&
+      (q ? (p.name + p.brand + p.fam).toLowerCase().includes(q) : p.fam === curFam));
     $$('storeList').innerHTML = list.slice(0, 60).map(p => {
       const rm = RARITY_META[p.rarity];
       const stats = Object.entries(p.stats).map(([k, v2]) => `${k} ${v2}`).join(' · ');
@@ -201,10 +202,16 @@ window.ECON = (() => {
       for (const f of LFAMS) if (k.parts && k.parts[f] === partId) n++;
     return n;
   }
+  function buildStats(id) {   // 'build:xxx' → a stamped Workbench engine (vp 40-800 → power)
+    if (!id || !String(id).startsWith('build:') || !window.ENGINEMATH) return null;
+    const b = ENGINEMATH.builds().find(x => 'build:' + x.id === id);
+    return b ? { power: 40 + b.vp / 6, weight: b.mass } : null;   // M1 basic build ≈ stock 55
+  }
   function computeMods(parts) {
     const cl = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
     const st = fam => {
       const id = parts && parts[fam];
+      if (fam === 'Engine') { const bs = buildStats(id); if (bs) return bs; }
       const p = id && PARTS.find(x => x.id === id);
       return p ? p.stats : STOCK_STATS[fam];
     };
@@ -230,6 +237,7 @@ window.ECON = (() => {
   function renderBars(parts) {
     const st = fam => {
       const id = parts && parts[fam];
+      if (fam === 'Engine') { const bs = buildStats(id); if (bs) return bs; }
       const p = id && PARTS.find(x => x.id === id);
       return p ? p.stats : STOCK_STATS[fam];
     };
@@ -253,8 +261,18 @@ window.ECON = (() => {
   function partOpts(fam, stockLabel) {   // owned + unbooked parts only (one kart per part)
     const my = inv();
     const opts = [{ id: '', label: stockLabel, sub: 'standard issue', color: '#8a8a8a' }];
+    if (fam === 'Engine' && window.ENGINEMATH) {
+      // engines are BUILT now (Standardization §6.6): the wheel lists your stamped builds
+      for (const b of ENGINEMATH.builds()) {
+        const bid = 'build:' + b.id;
+        const free = 1 - usedElsewhere(bid, editingId);
+        if (free <= 0 && draftParts.Engine !== bid) continue;
+        opts.push({ id: bid, label: b.name, sub: b.designation + ' · ' + b.vp + ' vp · by ' + b.builder, color: '#ff8c1a' });
+      }
+      return opts;
+    }
     for (const p of PARTS) {
-      if (p.fam !== fam || (my[p.id] || 0) <= 0) continue;
+      if (p.fam !== fam || (my[p.id] || 0) <= 0 || p.legacy || p.atom) continue;
       const free = (my[p.id] || 0) - usedElsewhere(p.id, editingId);
       if (free <= 0 && draftParts[fam] !== p.id) continue;   // bolted to another kart
       const stat = fam === 'Engine' ? 'power ' + (p.stats.power ?? '?') : 'grip ' + (p.stats.grip ?? '?');
@@ -378,7 +396,8 @@ window.ECON = (() => {
     if (!garageWired) {
       garageWired = true;
       $$('doorSimple').onclick = () => openBuilder(null);   // building happens IN the garage
-      $$('doorEng').onclick = () => toast('🔒 The Engineer Garage opens with the sim core. Soon.');
+      $$('doorEng').onclick = () => window.GARAGE3D ? GARAGE3D.open()
+        : toast('The Engineer Garage opens with the sim core. Soon.');
       $$('gBack').onclick = showDoors;
       $$('gSave').onclick = saveKart;
       $$('catPrev').onclick = () => stepCat(-1);

@@ -160,6 +160,56 @@ natural pick). No remote tweaks — influence flows through the human voice.
 **Build order:** all three sim primitives together; first shipped slice = DAMAGE
 (wire existing races into these rules before the garage economy exists).
 
+## 6.6 The Standardization — Parts System v2 (LOCKED 2026-08-07 — 19-Q session, log in PARTS-QA.md)
+
+**The lore IS the migration:** the VCRA passes the **Standardization Act**. The old
+~190-part catalogue is retired — owned pre-standard parts become non-functional
+**legacy collectibles** ("pre-standard era" shelf relics) plus a ₡ refund. The whole
+industry now speaks one decodable language.
+
+**The language (the point of the update):** real terminology *of the Valcorsa world* —
+codes and acronyms that MEAN things and can be learned. **Per-family dialects, like
+Earth industry** (tire codes read differently than oil, which reads differently than
+bolts — each family is its own little language to get famous for knowing). On top:
+**Brand · Model · Code** ("Enginos Tempesta — B-L2 2400") — brand carries personality
+and quality bias, the code carries the truth.
+
+- **Size is physical law:** S / M / L classes on bays, mounts, flanges, seats. An M cam
+  will not seat in an L head. Cursed adapters may exist as parts.
+- **Full spec sheets** on every part; **real-logic math** when parts combine —
+  simplified but honest physics (displacement × cam × induction shape the power curve;
+  cooling headroom vs heat; mass matters). Predictable to someone who LEARNS it.
+- **Units:** honest metric (cc, mm, kg) + **vp "valc-power"**, Valcorsa's own dyno unit
+  (40 lawnmower → 800+ open top; VCRA caps races in vp) + the **VM bolt standard**
+  (VM8×24). Approved dialect drafts: tires `210/55 R14-S`, oil/coolant `C10-40`,
+  fuses `F-30`, wire `W-2.5 ×5m`.
+- **Fully atomic catalogue, 13 systems:** engine internals · induction · fuel ·
+  exhaust · cooling · drivetrain · suspension · brakes · wheels & tires · electrical ·
+  aero & body · cockpit · hardware/consumables. (Anatomy map: PARTS-ANATOMY.svg.)
+
+**The Workbench loop** (diagram: WORKBENCH-LOOP.svg): the Engineer door opens into a
+**3D garage you move through by tapping between stations** (shelves/racks/drawers by
+system — bought parts arrive here). You **grab** what you need, then **stage the SIX
+BENCH BINS** — size-weighted: an L block fills a bin ×1, M parts stack ×4, hardware
+×24. You build FROM the bins; what you didn't grab you don't have (forgot the gasket =
+a whole trip — the trip is the game). Building enforces fitment, consumes bolts, and
+computes specs live. A finished build is **named + signed + earns its designation**:
+"WIDOWMAKER · L24T · 486 vp · built by Adam · S1" — the designation is computed from
+what's inside, never chosen. Builds drop into Simpleton karts, and are the unit of
+future engineer-shop commerce (see teams canon).
+
+**THE GARAGE GARAGE (Adam's reveal):** the Engineer Garage environment will eventually
+be **Adam's real house garage, 3D-reconstructed from ~30 photos**, with his real bins
+as the in-game storage. The v1 built garage uses the same station layout so the swap
+is seamless.
+
+**The store:** ONE big national parts store — aisles organized by system like a real
+parts store, brands are shelves within aisles. Packs stay generic gambling.
+
+**First slice (one-primitive rule): the ENGINE BENCH.** Garage stations + six bins +
+bench with only the engine stack atomic (blocks, cranks, pistons, cams, heads, turbos).
+Everything else stays as-is until the next slice.
+
 ## 7. Controls & Views (LOCKED: phone-first)
 
 - Device: **phone or iPad**, that simple. (Laptop/Chromebook supported — it's a browser link.)
@@ -235,3 +285,9 @@ All other months are normal touring seasons flavored by **seasonal + regional we
 6. Local COM characters — names, personalities, the first legends.
 7. Spectator/fan features scope (follows, cheering, clips).
 8. Engineer repair depth at normal-season scale (nightly Heiligen surgery vs weekday tune-ups).
+9. **Standardization details** — each family's full code dialect (engine designation
+   grammar: bay letter + displacement/100 + flags, e.g. L24T); the engine-stack catalog
+   contents (how many blocks/cams/heads/turbos, their specs and prices); the garage v1
+   station list; legacy refund values; VCRA vp caps per mode/day.
+10. **The garage scan** — capture checklist for Adam's ~30 photos, reconstruction
+   pipeline, bin mapping.
