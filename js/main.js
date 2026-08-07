@@ -51,7 +51,8 @@ const PHYS = {
   slideCap: 0.66,       // ~38°: tires saturate — the nose physically cannot rotate past the travel
                         // direction by more than this while drifting (was unbounded: nose spun 180°
                         // past the velocity and the car "accelerated backward")
-  driftBleed: 0.55,     // sliding rubber burns speed: /s fraction of lateral speed bled from forward
+  driftBleed: 0.26,     // sliding rubber burns speed — tuned so a HELD drift + clean release nets
+                        // a small edge over gripping (drift = advantage, A/B measured 2026-08-07)
   scrub: 0.35,          // turning costs speed: fraction of killed sideways motion lost forward too
   cornerUse: 0.6,       // fraction of max grip the AI plans corners at -> real braking zones
   stability: 6.0,       // self-straightening when you're not steering
@@ -2002,11 +2003,11 @@ function stepCar(car, input, dt) {
   const slideAbs = Math.min(Math.abs(slideNow) > Math.PI ? 2 * Math.PI - Math.abs(slideNow) : Math.abs(slideNow), Math.PI);
   if (input.handbrake && car.slip > 6 && speed > 10) car.driftT += dt;
   else if (!input.handbrake) {
-    if (car.driftT > 0.5) car.boostT = Math.min(0.25 + car.driftT * 0.35, 0.7);
+    if (car.driftT > 0.3) car.boostT = Math.min(0.35 + car.driftT * 0.5, 1.3);
     car.driftT = 0;
   }
   if (car.boostT > 0) {
-    if (vf > 2) aLong += 20 * Math.max(0, Math.cos(slideAbs * 1.5));   // aligned = full snap
+    if (vf > 2) aLong += 30 * Math.max(0, Math.cos(slideAbs * 1.1));   // aligned = full snap
     car.boostT -= dt;
   }
   aLong -= PHYS.drag * surf.dragMul * (PM ? PM.drag : 1) * vf * Math.abs(vf);
@@ -2229,13 +2230,14 @@ function aiInputs(car) {
   if (!car.finished && car.driftAt && speed > 24 && raceTime > car.hbCd && Math.abs(err) > 0.12) {
     let apexV = 1e9;
     for (let l = 4; l <= 34; l += 3) apexV = Math.min(apexV, vmax[(car.idx + l) % N]);
-    if (apexV < speed * 0.66 && Math.random() < car.driftAt * 0.06) {
+    if (apexV < speed * 0.66 && Math.random() < car.driftAt * 0.14) {
       car.hbUntil = raceTime + 0.3 + 0.5 * car.driftAt;
       car.hbCd = raceTime + 2.5;                            // one yank per corner
     }
   }
   if (raceTime < car.hbUntil) {
-    if (Math.abs(err) < 0.10) car.hbUntil = 0;              // rotated enough -> release, catch it
+    // release when rotated AND the charge is worth a boost — drifters hold the slide like players do
+    if (Math.abs(err) < 0.10 && car.driftT > 0.32) car.hbUntil = 0;
     else { handbrake = 1; steer = THREE.MathUtils.clamp(err * 4, -1, 1); throttle = 0.6; brake = 0; }
   }
 
@@ -2481,6 +2483,8 @@ function renderResults() {
   box.scrollTop = st;
 }
 function endRace() {                                    // the player's race is over -> open the live board
+  if (window.NET && NET.phase === 'racing')
+    NET.reportFinish(player.finishTime || raceTime, player.lap);
   stopVerstappenTheme();
   setMusicFinalLap(false);
   if (window.ECON && player._won == null) {             // position among finishers is locked at the line
@@ -3310,11 +3314,18 @@ function loop() {
         if (window.DMG) input = DMG.modInput(car, input, sub);          // damage speaks through the controls
         if (car.air) input = { ...input, steer: input.steer * 0.25 };   // limited authority mid-glide
         if (car.spun > 0) input = { throttle: 0, brake: 0.35, steer: 0, handbrake: 0 };
-        const before = car.distAcc;
-        stepCar(car, input, sub);
-        if (track.stage) { if (car.isPlayer) stageProgress(car); }   // open curve: no lap wrap
-        else if (before < track.N && car.distAcc >= track.N) { car.distAcc -= track.N; onLapComplete(car); }
-        else if (car.distAcc < -track.N * 0.5) { car.distAcc += track.N; car.lap--; }
+        if (car.netPuppet || car.netGhostCom) {
+          // a live friend (or the host's feed of a local) drives this kart — NET moves it,
+          // we only keep its lap-progress bookkeeping honest for the leaderboard
+          car.idx = nearestSample(car.x, car.z, car.idx, 40);
+          car.distAcc = car.idx;
+        } else {
+          const before = car.distAcc;
+          stepCar(car, input, sub);
+          if (track.stage) { if (car.isPlayer) stageProgress(car); }   // open curve: no lap wrap
+          else if (before < track.N && car.distAcc >= track.N) { car.distAcc -= track.N; onLapComplete(car); }
+          else if (car.distAcc < -track.N * 0.5) { car.distAcc += track.N; car.lap--; }
+        }
       }
       if (liveResults) updateLiveResults();
       collideCars(sub);
@@ -3420,6 +3431,7 @@ function perfHudUpdate(dt, cpuMs) {
 }
 
 function render(dt) {
+  if (window.NET) NET.netTick(dt);                 // live race position stream + puppet interp
   const speed = Math.hypot(player.velX, player.velZ);
   const fX = Math.sin(player.heading), fZ = Math.cos(player.heading);
   player.mesh.visible = camMode !== CAM_COCKPIT;

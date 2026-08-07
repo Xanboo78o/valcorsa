@@ -159,6 +159,7 @@
     <div id="homeMenu" class="pg">
       <button id="quickRace" onclick="startQuick()">QUICK RACE<span>Smashkart · Cañón del Perro Saltarín</span></button>
       <div id="diffRow">
+        <button class="navBtn" id="liveBtn" onclick="openLive()">RACE LIVE</button>
         <button class="navBtn" id="openWorldBtn" onclick="startFreeRoam()">CRUISE SAN VOLANTE</button>
       </div>
     </div>
@@ -419,6 +420,31 @@
   </div>
 </div>
 
+<!-- LIVE: rooms are races your friends are actually in -->
+<div id="liveModal">
+  <div class="panel livePanel">
+    <h2>RACE LIVE</h2>
+    <div id="liveJoinRow">
+      <button id="liveCreate">CREATE A ROOM</button>
+      <div class="liveOr">— or join one —</div>
+      <div class="liveJoin">
+        <input id="liveCodeIn" maxlength="4" placeholder="CODE" autocomplete="off">
+        <button id="liveJoinGo">JOIN</button>
+      </div>
+    </div>
+    <div id="liveLobby" style="display:none">
+      <p class="liveCode">ROOM <b id="liveCodeBig"></b> · tell your friends</p>
+      <div id="liveRoster"></div>
+      <div id="liveHostRow" style="display:none">
+        <select id="liveTrack"></select>
+        <button id="liveGo">START THE RACE</button>
+      </div>
+      <p id="liveWait" class="setNote">waiting for the host to pick a venue…</p>
+    </div>
+    <button class="closeSet" onclick="leaveLive()">Leave</button>
+  </div>
+</div>
+
 <!-- Results -->
 <div id="results"></div>
 
@@ -426,8 +452,8 @@
 <script type="importmap">
 { "imports": { "three": "./js/vendor/three.module.min.js", "three/addons/": "./js/vendor/addons/" } }
 </script>
-<script>window.APEX_V = '20260807v19';</script>
-<script type="module" src="js/boot.js?v=20260807v19"></script>
+<script>window.APEX_V = '20260807v20';</script>
+<script type="module" src="js/boot.js?v=20260807v20"></script>
 <script>window.resumeGameBtn = () => resumeGame();</script>
 </body>
 </html>
