@@ -141,20 +141,131 @@ window.GARAGE3D = (() => {
   }
   function renderLift() {
     const pan = $('gStationPanel');
-    const w = wearGet();
+    const w = wearGet(), my = inv();
     const clean = w.tire < 0.15 && w.engine > 0.92 && !w.flat;
-    const lines = [];
-    if (found.has('flat')) lines.push('🛞 flat tire — needs a swap');
-    if (found.has('susp')) lines.push('🔩 loose suspension — rattling');
-    if (found.has('tires')) lines.push('🛞 tire wear ' + Math.round(w.tire * 100) + '%');
-    if (found.has('engine')) lines.push('⚙️ engine down to ' + Math.round(w.engine * 100) + '%');
+    const tirePart = Object.keys(my).map(id => PARTS.find(p => p.id === id && p.fam === 'Tires' && my[id] > 0)).find(Boolean);
+    const gasket = Object.keys(my).map(id => PARTS.find(p => p.id === id && p.kind === 'gasket' && my[id] > 0)).find(Boolean);
+    const jobs = [];
+    if (found.has('flat') || found.has('susp') || found.has('tires')) {
+      const label = found.has('flat') ? '🛞 flat tire' : found.has('susp') ? '🔩 loose suspension + worn tires' : '🛞 tire wear ' + Math.round(w.tire * 100) + '%';
+      jobs.push(tirePart
+        ? `<div class="gRow"><div class="gInfo"><b>${label}</b><small>fits: ${tirePart.name}</small></div><button class="gGrab" data-fix="tires">WRENCH</button></div>`
+        : `<div class="gRow"><div class="gInfo"><b>${label}</b><small>you own no tires — the shop does</small></div><button class="gGrab" data-shop="1">SHOP</button></div>`);
+    }
+    if (found.has('engine')) {
+      jobs.push(gasket
+        ? `<div class="gRow"><div class="gInfo"><b>⚙️ engine service · ${Math.round(w.engine * 100)}%</b><small>uses: ${gasket.name}</small></div><button class="gGrab" data-fix="engine">WRENCH</button></div>`
+        : `<div class="gRow"><div class="gInfo"><b>⚙️ engine service · ${Math.round(w.engine * 100)}%</b><small>needs a head gasket (HG) — do not forget this</small></div><button class="gGrab" data-shop="1">SHOP</button></div>`);
+    }
     pan.innerHTML = `<h3>THE LIFT · ${liftCar ? liftCar.userData.kitName.toUpperCase() : ''}</h3>
       <p class="gKind">DRAG TO ORBIT · PINCH/SCROLL TO ZOOM · TAP A PART TO SHAKE IT</p>
       ${clean ? '<p class="gEmpty">she’s clean. go put some laps on her.</p>'
-        : lines.length ? '<p class="gKind">FOUND SO FAR</p>' + lines.map(l => `<div class="gRow"><div class="gInfo"><b>${l}</b></div></div>`).join('')
-        : '<p class="gEmpty">something’s off with this kart… get your hands on it and find it.</p>'}
-      <p class="gEmpty" style="opacity:.55">fixing arrives with THE WRENCH (slice 2)</p>`;
+        : jobs.length ? '<p class="gKind">THE JOB SHEET</p>' + jobs.join('')
+        : '<p class="gEmpty">something’s off with this kart… get your hands on it and find it.</p>'}`;
     pan.classList.add('open');
+    pan.querySelectorAll('[data-fix]').forEach(b => b.onclick = () => wrench(b.dataset.fix, { tirePart, gasket }));
+    pan.querySelectorAll('[data-shop]').forEach(b => b.onclick = () => { close(); window.closeGarage(); setTimeout(() => window.vcTab && vcTab('shop'), 180); });
+  }
+
+  // ---------------- THE WRENCH (slice 2): drag round and round until it slows
+  // to a stop. Keep cranking past the stop and you STRIP it — Jank Law on labor.
+  function wrench(job, parts) {
+    const ov = document.createElement('div');
+    ov.id = 'gWrench';
+    ov.innerHTML = `
+      <div class="wrTitle">${job === 'tires' ? 'TIRE SWAP' : 'ENGINE SERVICE'}</div>
+      <div class="wrRing"><canvas id="wrCv" width="440" height="440"></canvas>
+        <div class="wrTool">🔧</div></div>
+      <div class="wrHint">drag in circles — it slows when it’s torqued. stop there.</div>
+      <button class="wrBail">walk away</button>`;
+    const css = document.createElement('style');
+    css.textContent = `
+      #gWrench { position:absolute; inset:0; z-index:30; background:rgba(5,8,18,.88);
+        display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; touch-action:none; }
+      #gWrench .wrTitle { font-weight:900; letter-spacing:3px; color:#eef3ff; font-size:18px; }
+      #gWrench .wrRing { position:relative; width:min(64vw,440px); aspect-ratio:1; }
+      #gWrench canvas { width:100%; height:100%; }
+      #gWrench .wrTool { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+        font-size:64px; transform:rotate(0deg); pointer-events:none; }
+      #gWrench .wrHint { color:#8fa8e8; font-size:13px; max-width:260px; text-align:center; }
+      #gWrench .wrBail { background:none; border:1.5px solid #2e6bff; color:#8fa8e8; border-radius:8px; padding:8px 18px; }`;
+    ov.appendChild(css);
+    root.appendChild(ov);
+    const cv = ov.querySelector('#wrCv'), cx2 = cv.getContext('2d'), tool = ov.querySelector('.wrTool');
+    let revs = 0, lastA = null, done = false, stripped = false, overRevs = 0;
+    const NEED = 4.2;
+    function draw() {
+      const p = Math.min(1, Math.pow(revs / NEED, 0.65));
+      cx2.clearRect(0, 0, 440, 440);
+      cx2.lineWidth = 26; cx2.lineCap = 'round';
+      cx2.strokeStyle = 'rgba(46,107,255,.18)';
+      cx2.beginPath(); cx2.arc(220, 220, 180, 0, Math.PI * 2); cx2.stroke();
+      cx2.strokeStyle = stripped ? '#ff4433' : p >= 1 ? '#ffd23e' : '#2e6bff';
+      cx2.beginPath(); cx2.arc(220, 220, 180, -Math.PI / 2, -Math.PI / 2 + p * Math.PI * 2); cx2.stroke();
+      cx2.fillStyle = '#eef3ff'; cx2.font = '900 44px Poppins, sans-serif'; cx2.textAlign = 'center';
+      cx2.fillText(stripped ? 'STRIPPED' : p >= 1 ? 'TORQUED' : Math.round(p * 100) + '%', 220, 236);
+    }
+    draw();
+    let tick = 0;
+    function onMove(e) {
+      if (done) return;
+      const r = ov.querySelector('.wrRing').getBoundingClientRect();
+      const a = Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2));
+      if (lastA !== null) {
+        let d = a - lastA;
+        while (d > Math.PI) d -= 2 * Math.PI;
+        while (d < -Math.PI) d += 2 * Math.PI;
+        const dd = Math.abs(d) / (Math.PI * 2);
+        const p0 = Math.min(1, Math.pow(revs / NEED, 0.65));
+        revs += dd * (p0 >= 1 ? 1 : (1 - p0 * 0.55));           // it gets HEAVY near the stop
+        if (p0 >= 1) overRevs += dd;
+        tool.style.transform = 'rotate(' + Math.round(revs * 360) + 'deg)';
+        tick += dd;
+        if (tick > 0.09) {                                       // ratchet clicks
+          tick = 0;
+          try {
+            if (typeof audio !== 'undefined' && audio.ctx) {
+              const o = audio.ctx.createOscillator(); o.type = 'square'; o.frequency.value = p0 >= 1 ? 180 : 900;
+              const gg = audio.ctx.createGain(); gg.gain.setValueAtTime(0.05, audio.ctx.currentTime);
+              gg.gain.exponentialRampToValueAtTime(0.001, audio.ctx.currentTime + 0.03);
+              o.connect(gg); gg.connect(audio.master); o.start(); o.stop(audio.ctx.currentTime + 0.04);
+            }
+          } catch (er) {}
+          if (navigator.vibrate) navigator.vibrate(p0 >= 1 ? 24 : 8);
+        }
+        if (overRevs > 1.1 && !stripped) { stripped = true; finish(); return; }
+      }
+      lastA = a;
+      draw();
+    }
+    function onUp() {
+      lastA = null;
+      if (done) return;
+      if (Math.pow(revs / NEED, 0.65) >= 1) finish();
+    }
+    function finish() {
+      done = true;
+      const w = wearGet(), my = inv();
+      if (job === 'tires') {
+        my[parts.tirePart.id] = Math.max(0, (my[parts.tirePart.id] || 0) - 1);
+        w.tire = stripped ? 0.18 : 0;
+        w.flat = false;
+        found.delete('flat'); found.delete('susp'); found.delete('tires');
+      } else {
+        my[parts.gasket.id] = Math.max(0, (my[parts.gasket.id] || 0) - 1);
+        w.engine = stripped ? 0.88 : 1;
+        found.delete('engine');
+      }
+      setInv(my); wearSet(w);
+      say(stripped ? '💀 stripped the bolts — janky, but she’ll hold. mostly.'
+                   : '✅ torqued to spec. beautiful work.', stripped);
+      if (navigator.vibrate) navigator.vibrate(stripped ? [60, 40, 120] : [20, 30, 20, 30, 80]);
+      draw();
+      setTimeout(() => { ov.remove(); buildLiftCar(); renderLift(); }, 900);
+    }
+    ov.addEventListener('pointermove', onMove);
+    ov.addEventListener('pointerup', onUp);
+    ov.querySelector('.wrBail').onclick = () => ov.remove();
   }
 
   // ---------------------------------------------------------------- the room
@@ -584,5 +695,14 @@ window.GARAGE3D = (() => {
     if (window.ECON && ECON.garageUI) ECON.garageUI();   // livery rack may need fresh builds
   }
 
-  return { open, close };
+  return { open, close,
+    _dbg: {
+      station: () => curStation,
+      lift: () => liftCar,
+      shake: () => liftCar && shakePart(liftCar.children[1]),
+      cast: (x, y) => {
+        castAt({ clientX: x, clientY: y });
+        return liftCar ? ray.intersectObjects(liftCar.children, true).length : -1;
+      },
+    } };
 })();
