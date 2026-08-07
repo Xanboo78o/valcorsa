@@ -113,6 +113,42 @@ PALETTES.city = {
 };
 PALETTES.countryside = PALETTES.meadow;
 PALETTES.oval = PALETTES.meadow;
+// the frozen interior (Hiljaisuus): snow ground, dark spruce, pale light
+PALETTES.taiga = {
+  day: _pal({
+    skyTop: 0x9db8d4, skyHorizon: 0xeef4fa,
+    sunColor: 0xfff8ec, sunI: 2.2,
+    hemiSky: 0xdbe8f4, hemiGround: 0xb8c4d2, hemiI: 0.6,
+    ground: [0xdfe7ee, 0xedf3f8, 0xfafdff],
+    canopy: [0x2c473a, 0x3d5c4a],
+    road: 0x565c68, roadEdge: 0xf2f5f9, marking: 0xffffff,
+    kerb: [0xd0342c, 0xffffff],
+    fog: 0xe8eef6, ink: 0x2c3a50, rim: 0xffffff,
+    haze: [0xe4edf6, 0xd3e0ee, 0xc0d2e6],
+  }),
+  dusk: _pal({
+    skyTop: 0x6a5e8e, skyHorizon: 0xf5b97c,
+    sunColor: 0xffc27c, sunI: 1.4,
+    hemiSky: 0xc0a8cc, hemiGround: 0x8e94a4, hemiI: 0.45,
+    ground: [0xc9c4d6, 0xd8d4e2, 0xe8e4ef],
+    canopy: [0x27392f, 0x33493c],
+    road: 0x4a4c5c, roadEdge: 0xe6dfd8, marking: 0xf2ece4,
+    kerb: [0xb52f28, 0xe8e0d4],
+    fog: 0xe2c4a8, ink: 0x3a3450, rim: 0xffd9ae,
+    haze: [0xe8c9a8, 0xd4ab9c, 0xb490a0],
+  }),
+  night: _pal({
+    skyTop: 0x0a1226, skyHorizon: 0x1d2c4e,
+    sunColor: 0xbdd2f5, sunI: 0.4,
+    hemiSky: 0x2c3c5e, hemiGround: 0x202a38, hemiI: 0.34,
+    ground: [0x2c3644, 0x37445a, 0x46566e],
+    canopy: [0x101d16, 0x18291e],
+    road: 0x20242e, roadEdge: 0xa2acbe, marking: 0xb2bccc,
+    kerb: [0x6e2724, 0x9a94a2],
+    fog: 0x101a30, ink: 0x67799e, rim: 0x9fc0f0,
+    haze: [0x1a2745, 0x162138, 0x111a2c],
+  }),
+};
 
 // The live blended palette — every color is a THREE.Color instance that gets lerped
 // in place each frame, so materials can hold references to them safely.
