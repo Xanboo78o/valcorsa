@@ -1992,9 +1992,9 @@ function stepCar(car, input, dt) {
   }
   if (input.brake > 0) {
     if (vf > 1.5) aLong -= PHYS.brakeAccel * (PM ? PM.brake : 1) * input.brake * Math.min(surf.grip * 1.4, 1);
-    // reverse disabled for the player for now (a shifter will re-enable it later); AI may still back up
-    else if (!car.isPlayer && vf > -PHYS.reverseMax) aLong -= PHYS.reverseAccel * input.brake;
-    else if (car.isPlayer && vf > 0) aLong -= PHYS.brakeAccel * input.brake * 0.5;  // ease the last bit to a stop
+    // hold the brake below walking pace and the kart backs up — reverse for everyone
+    // (Domain Expansion: no more being pinned on a wall)
+    else if (vf > -PHYS.reverseMax) aLong -= PHYS.reverseAccel * input.brake;
   }
   // drifting COSTS speed now (rally rules) — the reward moved to the exit: hold a real
   // slide, straighten out, release → traction snap. Release while still sideways = fizzle.
@@ -2161,6 +2161,60 @@ function aiInputs(car) {
   vTarget *= (car.cornerConf || 1);
   if (car.vCap) vTarget = Math.min(vTarget, car.vCap);   // personal top-speed limiter (straights)
 
+  // ---- racecraft: defending + attacking maneuvers (elite bots race YOU, not just the track)
+  if (car.defSkill || car.atkSkill) {
+    const mfX = Math.sin(car.heading), mfZ = Math.cos(car.heading);
+    // DEFEND: someone close behind and closing -> cover their side. One move per straight.
+    if (car.defSkill && raceTime > car.defCd && car.moveT <= 0) {
+      for (const o of cars) {
+        if (o === car || o.finished || o.traffic) continue;
+        const dx = o.x - car.x, dz = o.z - car.z, dist = Math.hypot(dx, dz);
+        if (dist > 16 || dist < 0.01) continue;
+        if (dx * mfX + dz * mfZ >= -0.2 * dist) continue;               // behind me only
+        if ((o.velX * mfX + o.velZ * mfZ) - speed < 1) continue;        // and actually closing
+        car.defCd = raceTime + 4 + Math.random() * 3;
+        if (Math.random() > car.defSkill) break;                        // didn't check the mirrors
+        const side = dx * mfZ - dz * mfX;
+        car.moveDir = side > 0 ? 1 : -1;                                // slide toward their side
+        car.moveT = 0.45 + car.defSkill * 0.45;
+        break;
+      }
+    }
+    // ATTACK: someone close ahead -> dive for the inside when a corner looms; elite feint on straights
+    if (car.atkSkill && raceTime > car.atkCd && car.moveT <= 0) {
+      const tH = track.tangents[car.idx], tA = track.tangents[(car.idx + 22) % N];
+      const turn = tH.x * tA.z - tH.z * tA.x;                           // which way the road bends
+      for (const o of cars) {
+        if (o === car || o.finished || o.traffic) continue;
+        const dx = o.x - car.x, dz = o.z - car.z, dist = Math.hypot(dx, dz);
+        if (dist > 14 || dist < 0.01) continue;
+        if (dx * mfX + dz * mfZ <= 0.3 * dist) continue;                // ahead of me only
+        if (speed - (o.velX * mfX + o.velZ * mfZ) < 1.2) continue;      // and I'm faster
+        if (Math.abs(turn) > 0.10) {                                    // corner coming: DIVE inside
+          car.moveDir = turn > 0 ? 1 : -1;
+          car.moveT = 0.8;
+          car.atkCharge = 0.55 * car.atkSkill;                          // brake later, commit
+          car.atkCd = raceTime + 5 + Math.random() * 4;
+        } else if (car.atkSkill > 0.75 && Math.random() < 0.5) {        // feint-and-switch
+          car.feintT = 0.34;
+          car.moveDir = Math.random() < 0.5 ? 1 : -1;
+          car.atkCd = raceTime + 3 + Math.random() * 2;
+        }
+        break;
+      }
+    }
+    const hw = track.halfW * 0.82;
+    if (car.moveT > 0) {
+      car.moveT -= 0.016;
+      car.laneVar = THREE.MathUtils.clamp(car.laneVar + car.moveDir * 24 * 0.016, -hw, hw);
+    }
+    if (car.feintT > 0) {                                               // jab one way, go the other
+      car.feintT -= 0.016;
+      car.laneVar = THREE.MathUtils.clamp(car.laneVar + car.moveDir * (car.feintT > 0.17 ? 30 : -36) * 0.016, -hw, hw);
+    }
+    if (car.atkCharge > 0) { car.atkCharge -= 0.016; vTarget *= 1.10; } // the late-brake lunge window
+  }
+
   let throttle = 0, brake = 0;
   if (speed < vTarget - 1) throttle = 1;
   else if (speed > vTarget + 1.5) brake = THREE.MathUtils.clamp((speed - vTarget) / 8, 0.2, 1);
@@ -2266,14 +2320,17 @@ function startGame(def, m) {
   // Pace tiers are WIDE on purpose: the field must string out lap by lap — aces gap the
   // midfield, the slow tier is genuinely lappable by a good player, dumb is quick-but-crashy.
   const PERSONAS = {
-    ace:   { capLo: 196, capHi: 204, skill: 1.04, engine: 1.06, corner: 1.00, wob: 0.09, jit: 0.028, drift: 0.70, cs: 0.85, lapse: 0.0008 },
-    mid:   { capLo: 168, capHi: 181, skill: 0.93, engine: 0.96, corner: 1.04, wob: 0.17, jit: 0.05,  drift: 0.35, cs: 0.50, lapse: 0.003 },
-    slow:  { capLo: 138, capHi: 152, skill: 0.85, engine: 0.82, corner: 0.94, wob: 0.16, jit: 0.05,  drift: 0,    cs: 0.35, lapse: 0.0015 },
-    dumb:  { capLo: 165, capHi: 188, skill: 0.80, engine: 0.99, corner: 1.16, wob: 0.34, jit: 0.11,  drift: 0.60, cs: 0.10, lapse: 0.011 },
-    versta:{ capLo: 226, capHi: 234, skill: 1.12, engine: 1.48, corner: 0.98, wob: 0.04, jit: 0.02,  drift: 1.0,  cs: 1.0,  lapse: 0 },
+    // elite: PLAYER-pace racecraft — two of them every grid. They win with maneuvers
+    // (def/atk below), not raw pace: beat them by driving better, not by outrunning them.
+    elite: { capLo: 203, capHi: 209, skill: 1.07, engine: 1.10, corner: 1.00, wob: 0.06, jit: 0.02,  drift: 0.85, cs: 0.95, lapse: 0.0003, def: 0.95, atk: 0.9 },
+    ace:   { capLo: 196, capHi: 204, skill: 1.04, engine: 1.06, corner: 1.00, wob: 0.09, jit: 0.028, drift: 0.70, cs: 0.85, lapse: 0.0008, def: 0.6, atk: 0.55 },
+    mid:   { capLo: 168, capHi: 181, skill: 0.93, engine: 0.96, corner: 1.04, wob: 0.17, jit: 0.05,  drift: 0.35, cs: 0.50, lapse: 0.003,  def: 0.3, atk: 0.25 },
+    slow:  { capLo: 138, capHi: 152, skill: 0.85, engine: 0.82, corner: 0.94, wob: 0.16, jit: 0.05,  drift: 0,    cs: 0.35, lapse: 0.0015, def: 0.15, atk: 0 },
+    dumb:  { capLo: 165, capHi: 188, skill: 0.80, engine: 0.99, corner: 1.16, wob: 0.34, jit: 0.11,  drift: 0.60, cs: 0.10, lapse: 0.011,  def: 0.5, atk: 0.7 },  // wild blocks, dive-bombs
+    versta:{ capLo: 226, capHi: 234, skill: 1.12, engine: 1.48, corner: 0.98, wob: 0.04, jit: 0.02,  drift: 1.0,  cs: 1.0,  lapse: 0,      def: 1, atk: 1 },
   };
-  // roster of 11: a couple aces, some mid, a couple slow, a handful of dumb
-  let roster = ['ace', 'ace', 'mid', 'mid', 'mid', 'slow', 'slow', 'dumb', 'dumb', 'dumb', 'dumb'];
+  // roster of 11: two elites at your pace, an ace, mids, slows, and the dumb tier
+  let roster = ['elite', 'elite', 'ace', 'mid', 'mid', 'slow', 'slow', 'dumb', 'dumb', 'dumb', 'dumb'];
   for (let k = roster.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [roster[k], roster[j]] = [roster[j], roster[k]]; }
   const verstappen = Math.random() < 0.2;            // ~1 in 5 races: El Santo himself shows up
   if (verstappen) roster[0] = 'versta';
@@ -2294,6 +2351,8 @@ function startGame(def, m) {
     c.engineMul = P.engine * (0.96 + Math.random() * 0.08);
     c.cornerConf = P.corner + (key === 'dumb' ? Math.random() * 0.18 : 0);  // dumb varies: some wilder
     c.driftAt = P.drift; c.csSkill = P.cs * (0.85 + Math.random() * 0.3); c.lapseRate = P.lapse;
+    c.defSkill = P.def || 0; c.atkSkill = P.atk || 0;   // racecraft: blocking + attacking maneuvers
+    c.defCd = 0; c.atkCd = 0; c.moveT = 0; c.moveDir = 0; c.feintT = 0; c.atkCharge = 0;
     c.topW = 0.22 + Math.random() * 0.16;             // slow top-speed breathing, out of phase
     c.topPhase = Math.random() * Math.PI * 2;
     c.lineBias = THREE.MathUtils.clamp((nAI > 1 ? -0.7 + i * (1.4 / (nAI - 1)) : 0) + (Math.random() - 0.5) * 0.25, -0.8, 0.8);
