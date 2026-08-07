@@ -14,7 +14,7 @@
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="stylesheet" href="style.css">
 <script>
-  if ('serviceWorker' in navigator && location.protocol === 'https:')
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost'))
     addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
 </script>
 </head>
@@ -479,7 +479,7 @@
 <script type="importmap">
 { "imports": { "three": "./js/vendor/three.module.min.js", "three/addons/": "./js/vendor/addons/" } }
 </script>
-<script>window.APEX_V = '20260807v32';</script>
+<script>window.APEX_V = '20260807v33';</script>
 <script type="module" src="js/boot.js?v=20260807v32"></script>
 <script>window.resumeGameBtn = () => resumeGame();</script>
 </body>

@@ -3,7 +3,7 @@
    - Music/SFX/fonts/icons: CACHE-FIRST in a persistent cache that survives deploys —
      these files never change, and re-downloading ~15MB of music every session is what
      blew the Netlify bandwidth cap (2026-08-07, site went 503 usage_exceeded). */
-const CACHE = 'valcorsa-v32';
+const CACHE = 'valcorsa-v33';
 const MEDIA = 'valcorsa-media-v2';          // v2: original OST replaced the CC soundtrack (2026-08-07)
 const IMMUTABLE = /\/(music|sfx|fonts|icons)\//;   // no ^ anchor: site may live under /valcorsa/ (GitHub Pages)
 
@@ -39,4 +39,22 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match(e.request, { ignoreSearch: url.pathname.endsWith('/') })
       .then(hit => hit || caches.match('./')))
   );
+});
+
+// ---- RACE NOTOS: push from the race-notos edge function ----
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) {}
+  e.waitUntil(self.registration.showNotification(d.title || 'VALCORSA', {
+    body: d.body || 'A race is forming.',
+    icon: 'icons/icon-192.png', badge: 'icons/icon-192.png',
+    tag: d.tag || 'race', data: { url: d.url || './' },
+  }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
+    for (const w of ws) if ('focus' in w) return w.focus();
+    return clients.openWindow((e.notification.data && e.notification.data.url) || './');
+  }));
 });
