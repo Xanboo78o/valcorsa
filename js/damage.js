@@ -41,6 +41,34 @@
     if (car.isPlayer) { toast('Tire’s gone!'); sfx(140, 0.25, 0.3); }
   }
 
+  // THE McQUEEN: slam the wall, get thrown back across the road, tumble, land,
+  // skid on the bodywork in a shower of sparks. Scary on purpose.
+  function bigCrash(car, dash) {
+    const d = D(car);
+    d.cd = 1.4;
+    d.engine = Math.max(0.3, d.engine - 0.35);
+    if (!d.bumper) d.bumper = Math.random() < 0.5 ? -1 : 1;
+    if (!d.flat && Math.random() < 0.5) goFlat(car);
+    // deflect INTO the track (wall normal from the centerline, same math as stepCar)
+    let nx = 0, nz = 0;
+    try {
+      const sp = track.samples[car.idx];
+      const dd = Math.hypot(car.x - sp.x, car.z - sp.z) || 1;
+      nx = (sp.x - car.x) / dd; nz = (sp.z - car.z) / dd;
+    } catch (e) {}
+    const spd = Math.hypot(car.velX, car.velZ);
+    car.velX = car.velX * 0.22 + nx * spd * 0.42;
+    car.velZ = car.velZ * 0.22 + nz * spd * 0.42;
+    car.y += 0.3;
+    car.air = { vy: 6.5 + Math.min(6, dash * 0.028) };            // LAUNCHED
+    car.crash = { phase: 'fly', skid: 1.3 + Math.random() * 1.2,
+                  roll: (Math.random() < 0.5 ? -1 : 1) * (7 + Math.random() * 5) };
+    car._tumbleA = 0;
+    car._crumple = 1.3;
+    car._boom = dash;
+    if (car.isPlayer) { camShake = Math.max(camShake, 1.3); toast('THAT’S A BIG ONE.'); }
+  }
+
   function shatter(car) {
     const d = D(car);
     if (d.shattered) return;
@@ -63,17 +91,29 @@
     if (d.cd > 0 || d.shattered) return;
     // chassis TOUGH softens (or sharpens) the hit — tough 9 truck shrugs off what folds a bike
     const tough = (car.isPlayer && window.ECON && ECON.mods) ? (ECON.mods().tough ?? 5) : 5;
-    const dash = v * DASH * (1 - (tough - 5) * 0.04);   // impact speed as the driver reads it
+    let dash = v * DASH * (1 - (tough - 5) * 0.04);     // impact speed as the driver reads it
+    // pileup law: hitting a wreck escalates — one crash seeds the next
+    if (typeof cars !== 'undefined' && dash > 32) {
+      for (const o of cars) {
+        if (o === car || (!o.crash && !(o.spun > 0))) continue;
+        if (Math.hypot(o.x - car.x, o.z - car.z) < 4.5) { dash *= 1.4; break; }
+      }
+    }
     if (dash < 25) return;                       // a bump: knockback and you're chillin
     d.cd = 0.5;
     if (dash > 195) return shatter(car);         // full-send head-on: carisvaporizeditis
-    if (dash > 90) {                             // a proper accident
+    if (dash > 135) return bigCrash(car, dash);  // THE McQUEEN: launched, tumbling, skidding
+    if (dash > 90) {                             // a proper accident — the wall WINS
+      car.velX *= 0.22; car.velZ *= 0.22;        // immediate stop: speed dies at the wall
       d.engine = Math.max(0.25, d.engine - (dash - 90) / 260);
       if (!d.flat && dash > 120 && Math.random() < 0.35) goFlat(car);
       if (!d.bumper && dash > 100 && Math.random() < 0.6) {
         d.bumper = Math.random() < 0.5 ? -1 : 1;      // the bumper tears loose and DRAGS
         if (car.isPlayer) toast('Bumper’s hanging — hear it grinding?');
       }
+      if (Math.random() < 0.5) car.spun = 0.9 + Math.random() * 0.6;   // and sometimes you LOSE it
+      car._crumple = Math.min(1, 0.5 + (dash - 90) / 90);
+      car._boom = dash;                          // speedfx: the CRUMPLE sound + debris
       bump(car, 0.5);
       if (car.isPlayer) sfx(70, 0.3, 0.4);
     } else {                                     // a scrape
@@ -88,6 +128,7 @@
     const d = car.dmg;
     if (!d) { D(car); return input; }
     if (d.shattered) return { throttle: 0, brake: 1, steer: 0, handbrake: 0 };
+    if (car.crash) return { throttle: 0, brake: 1, steer: 0, handbrake: 0 };   // you're a passenger now
     let { throttle, steer } = input;
     const speed = Math.hypot(car.velX, car.velZ);
 

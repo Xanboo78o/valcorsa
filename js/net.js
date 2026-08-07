@@ -94,23 +94,34 @@ window.NET = (() => {
     // the puppet just freezes until their positions flow again
     for (const r of list) if (r.id !== myId && !peers.has(r.id))
       peers.set(r.id, { name: r.name, kit: r.kit, car: null, buf: [], lastSeen: performance.now() });
+    // host mid-race: replay the start ticket so late joiners enter (behind the safety cars)
+    if (isHost && phase === 'racing' && startMsg && chan)
+      chan.send({ type: 'broadcast', event: 'start', payload: { ...startMsg, replay: true } });
     if (onLobby) onLobby({ room, list, isHost, phase });
   }
 
   // ---------------------------------------------------------------- race start
+  let startMsg = null;                // the live race's start ticket — replayed for late joiners
   function hostStart(def, mode) {
     if (!isHost || !chan) return;
     const msg = { track: def.id, mode: mode || 'race', at: Date.now() + 4000, seats: roster().map(r => r.id) };
+    startMsg = msg;
     chan.send({ type: 'broadcast', event: 'start', payload: msg });
     onStart(msg);   // self:false — run it locally too
   }
   function onStart(msg) {
+    if (phase === 'racing' && msg.replay) return;       // already in — the replay isn't for us
     const def = TRACKS.find(t => t.id === msg.track);
     if (!def) return;
     phase = 'racing';
+    startMsg = msg;
     finishes.length = 0;
     if (window.closeLive) closeLive();
+    const sl = $('schedLobby');                         // the stuck "waiting on the grid" fix:
+    if (sl) sl.style.display = 'none';                  // the lobby ALWAYS clears when a race starts
     startGame(def, msg.mode);
+    // joined after lights out? no waiting screen — you enter behind the safety cars
+    if (msg.replay && window.SAFETY) SAFETY.enter();
     // players take the front grid slots: repaint AI cars into live puppets
     const seats = msg.seats.filter(id => id !== myId);
     let ai = cars.filter(c => !c.isPlayer);

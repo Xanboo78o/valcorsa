@@ -91,6 +91,7 @@ window.SCHED = (() => {
   function tickLobby(r) {
     const w = $('schedLobbyWhen');
     if (!w || $('schedLobby').style.display === 'none') return;
+    if (window.NET && NET.phase === 'racing') { $('schedLobby').style.display = 'none'; return; }   // never stick over a live race
     const dt = r.at.getTime() - Date.now();
     w.textContent = dt <= 0 ? 'lights out any second…' : 'lights out in ' + fmtIn(dt);
     setTimeout(() => tickLobby(r), 500);

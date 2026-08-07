@@ -53,6 +53,7 @@
     if (ready && scene === lastScene) return;
     lastScene = scene;
     buildPools(scene);
+    ensureDebris(scene);
     if (!slCanvas) {
       slCanvas = document.createElement('canvas');
       slCanvas.id = 'speedLines';
@@ -112,6 +113,164 @@
     }
   }
 
+  // ---------------------------------------------------------------- CRASHES
+  // The McQueen: damage.js decides a car is having one (car.crash) — this side
+  // makes it LOOK and SOUND like one: tumble, body-skid, sparks, crumple, boom.
+  let bufs = null, bufsLoading = false;
+  function loadBufs() {
+    if (bufs || bufsLoading) return;
+    if (typeof audio === 'undefined' || !audio || !audio.ctx) return;
+    bufsLoading = true;
+    const names = ['crash0', 'crash1', 'crash2', 'scrape0', 'scrape1'];
+    Promise.all(names.map(n => fetch('sfx/' + n + '.mp3')
+      .then(r => r.arrayBuffer()).then(b => audio.ctx.decodeAudioData(b)).catch(() => null)))
+      .then(arr => { bufs = {}; names.forEach((n, i) => bufs[n] = arr[i]); });
+  }
+  function playBuf(name, rate, gain) {
+    if (!bufs || !bufs[name] || typeof audio === 'undefined' || !audio.ctx) return;
+    const src = audio.ctx.createBufferSource(), g = audio.ctx.createGain();
+    src.buffer = bufs[name];
+    src.playbackRate.value = rate || 1;
+    g.gain.value = gain || 1;
+    src.connect(g); g.connect(audio.master || audio.ctx.destination);
+    src.start();
+  }
+  function attn(c) {                       // crashes far up the road are quieter
+    if (c.isPlayer || typeof player === 'undefined' || !player) return 1;
+    const d = Math.hypot(c.x - player.x, c.z - player.z);
+    return 1 / (1 + d / 55);
+  }
+  function boomSound(c, sev) {
+    loadBufs();
+    if (typeof audio === 'undefined' || !audio || !audio.ctx) return;
+    const k = attn(c);
+    if (k < 0.08) return;
+    const t = audio.ctx.currentTime;
+    const o = audio.ctx.createOscillator(), g = audio.ctx.createGain();   // the sub WHOMP
+    o.type = 'sine';
+    o.frequency.setValueAtTime(85, t);
+    o.frequency.exponentialRampToValueAtTime(24, t + 0.55);
+    g.gain.setValueAtTime(0.95 * k, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    o.connect(g); g.connect(audio.master || audio.ctx.destination);
+    o.start(t); o.stop(t + 0.75);
+    playBuf('crash' + Math.floor(Math.random() * 3), 0.9 + Math.random() * 0.2, Math.min(1.4, 0.7 + sev / 150) * k);
+    setTimeout(() => playBuf('crash' + Math.floor(Math.random() * 3), 0.78, 0.5 * k), 95);   // the crumple-after
+    setTimeout(() => playBuf('scrape' + (Math.random() < 0.5 ? 0 : 1), 1.12, 0.5 * k), 190); // …and the whoosh-grind
+  }
+
+  // real crumple: shove the nose vertices back like crushed sheet metal.
+  // Every kart's welded geometry is unique to it, so mutating in place is safe.
+  function crumple(c, sev) {
+    if (!c.mesh) return;
+    c._crumpleN = (c._crumpleN || 0) + 1;
+    if (c._crumpleN > 3) return;                        // fully crushed is crushed
+    for (const m of c.mesh.children) {
+      if (!m.isMesh || !m.geometry || !m.geometry.attributes.position) continue;
+      if (m === c._bmesh || m.isSprite) continue;
+      const pos = m.geometry.attributes.position;
+      m.geometry.computeBoundingBox();
+      const bb = m.geometry.boundingBox;
+      if (bb.max.z - bb.min.z < 0.6) continue;          // trinkets keep their shape
+      const zThr = bb.max.z - 1.15, depth = 1.15;
+      let touched = false;
+      for (let i = 0; i < pos.count; i++) {
+        const z = pos.getZ(i);
+        if (z <= zThr) continue;
+        const f = Math.min(1, (z - zThr) / depth) * sev;
+        pos.setZ(i, z - f * 0.5);
+        pos.setY(i, pos.getY(i) - f * 0.1 * Math.random());
+        pos.setX(i, pos.getX(i) + (Math.random() - 0.5) * 0.12 * f);
+        touched = true;
+      }
+      if (touched) { pos.needsUpdate = true; m.geometry.computeVertexNormals(); }
+    }
+  }
+
+  // debris: dark shards that fly off a big one
+  const debris = [];
+  function ensureDebris(sc) {
+    if (debris.length) { debris.forEach(o => sc.add(o.m)); return; }
+    for (let i = 0; i < 14; i++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.16 + Math.random() * 0.14, 0.05, 0.2 + Math.random() * 0.16),
+        new THREE.MeshBasicMaterial({ color: Math.random() < 0.7 ? 0x161a20 : 0x8f98a6 }));
+      m.visible = false;
+      sc.add(m);
+      debris.push({ m, t: 0, vx: 0, vy: 0, vz: 0, rx: 0, rz: 0 });
+    }
+  }
+  let dCur = 0;
+  function throwDebris(c, n) {
+    for (let i = 0; i < n; i++) {
+      const o = debris[dCur = (dCur + 1) % debris.length];
+      o.m.visible = true;
+      o.m.position.set(c.x + (Math.random() - 0.5) * 1.4, c.y + 0.5 + Math.random() * 0.5, c.z + (Math.random() - 0.5) * 1.4);
+      o.vx = (Math.random() - 0.5) * 9; o.vz = (Math.random() - 0.5) * 9;
+      o.vy = 3.5 + Math.random() * 6;
+      o.rx = (Math.random() - 0.5) * 14; o.rz = (Math.random() - 0.5) * 14;
+      o.t = 1.5;
+      o.baseY = c.y;
+    }
+  }
+  function stepDebris(dt) {
+    for (const o of debris) {
+      if (!o.m.visible) continue;
+      o.t -= dt;
+      if (o.t <= 0) { o.m.visible = false; continue; }
+      o.vy -= 21 * dt;
+      o.m.position.x += o.vx * dt; o.m.position.y += o.vy * dt; o.m.position.z += o.vz * dt;
+      if (o.m.position.y < (o.baseY || 0) + 0.05 && o.vy < 0) { o.vy *= -0.3; o.vx *= 0.6; o.vz *= 0.6; o.m.position.y = (o.baseY || 0) + 0.05; }
+      o.m.rotation.x += o.rx * dt; o.m.rotation.z += o.rz * dt;
+      if (o.t < 0.4) o.m.scale.setScalar(o.t / 0.4);
+    }
+  }
+
+  function crashFX(c, dt) {
+    // one-shot triggers set by damage.js
+    if (c._boom) { boomSound(c, c._boom); if (c._boom > 105) throwDebris(c, 5 + Math.floor(Math.random() * 5)); c._boom = 0; }
+    if (c._crumple) { crumple(c, c._crumple); c._crumple = 0; }
+    const cr = c.crash;
+    if (!cr || !c.mesh) return;
+    cr.life = (cr.life || 0) + dt;
+    if (cr.life > 7) { delete c.crash; c._tumbleA = 0; return; }        // failsafe: nobody stays crashed forever
+    const speed = Math.hypot(c.velX || 0, c.velZ || 0);
+    if (cr.phase === 'fly') {
+      c._tumbleA = (c._tumbleA || 0) + cr.roll * dt;                    // tumbling through the air
+      c._smkT = (c._smkT || 0) - dt;
+      if (c._smkT <= 0) { c._smkT = 0.08; puff(smokes, c.x, c.y + 0.4, c.z, 1.1, 0.7, 0.6); }
+      if (!c.air) {                                                     // touchdown
+        cr.phase = 'skid';
+        const q = Math.PI / 2;
+        cr.rest = Math.round((c._tumbleA || 0) / q) * q;
+        if (Math.abs(((cr.rest % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) < 0.01) cr.rest += q;  // land WRECKED, not upright
+        boomSound(c, 60);                                               // the landing thud
+        for (let k = 0; k < 6; k++) puff(dusts, c.x + (Math.random() - 0.5) * 2, c.y + 0.15, c.z + (Math.random() - 0.5) * 2, 1.3, 0.7, 0.9);
+      }
+    } else if (cr.phase === 'skid') {
+      cr.skid -= dt;
+      c._tumbleA += (cr.rest - c._tumbleA) * Math.min(1, dt * 9);       // settle onto the bodywork
+      c.velX *= Math.exp(-2.1 * dt); c.velZ *= Math.exp(-2.1 * dt);     // the long grind to a stop
+      if (speed > 5) {
+        c._skT = (c._skT || 0) - dt;
+        if (c._skT <= 0) {
+          c._skT = 0.05;
+          sparks(c.x + (Math.random() - 0.5) * 1.2, c.y + 0.1, c.z + (Math.random() - 0.5) * 1.2,
+                 5, -(c.velX || 0) / Math.max(1, speed), -(c.velZ || 0) / Math.max(1, speed), speed * 0.18);
+          puff(smokes, c.x, c.y + 0.3, c.z, 1.0, 0.6, 1.0);
+        }
+        c._scrT = (c._scrT || 0) - dt;
+        if (c._scrT <= 0) { c._scrT = 0.34; playBuf('scrape' + (Math.random() < 0.5 ? 0 : 1), 0.9 + Math.random() * 0.3, 0.4 * attn(c)); }
+      }
+      if (cr.skid <= 0 && speed < 14) cr.phase = 'out';
+    } else if (cr.phase === 'out') {
+      const q2 = Math.PI * 2;
+      const target = Math.round((c._tumbleA || 0) / q2) * q2;           // roll back onto the wheels
+      c._tumbleA += (target - c._tumbleA) * Math.min(1, dt * 7);
+      if (Math.abs(c._tumbleA - target) < 0.05) { c._tumbleA = 0; delete c.crash; }
+    }
+    if (c._tumbleA) { c.mesh.rotateZ(c._tumbleA); c.mesh.rotateX(c._tumbleA * 0.22); }
+  }
+
   function ensureBumper(c) {
     const has = c.dmg && c.dmg.bumper;
     if (has && !c._bmesh && c.mesh) {
@@ -133,6 +292,8 @@
     if (!c.mesh || !c.mesh.visible) return;
     const speed = Math.hypot(c.velX || 0, c.velZ || 0);
     ensureBumper(c);
+    crashFX(c, dt);
+    if (c.crash) return;                       // crashing cars are busy crashing
     if (speed < 4) { c._py = c.y; c._pvy = 0; return; }
     const sinH = Math.sin(c.heading || 0), cosH = Math.cos(c.heading || 0);
 
@@ -229,6 +390,7 @@
     if (typeof cars !== 'undefined' && cars && (typeof state === 'undefined' || state !== 'menu'))
       for (const c of cars) carFX(c, dt);
     stepPools(dt);
+    stepDebris(dt);
     drawSpeedLines();
   }
 
