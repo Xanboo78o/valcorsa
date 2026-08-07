@@ -46,7 +46,7 @@ const PHYS = {
   aLatMax: 64,          // high grip -> planted, forgiving (arcade F1)
   steerOver: 1.08,      // little slack past grip -> predictable, few spins
   downforce: 0.16,      // grip gain per (u/s), sticks at speed
-  handbrakeGrip: 0.42,  // rear grip while handbraking: loose enough to swing, enough to CARVE the arc
+  handbrakeGrip: 0.38,  // rear grip while handbraking: loose enough to swing, enough to CARVE the arc
   hbYaw: 2.2,           // extra yaw authority while handbraking, rad/s at full steer + speed
   slideCap: 0.66,       // ~38°: tires saturate — the nose physically cannot rotate past the travel
                         // direction by more than this while drifting (was unbounded: nose spun 180°
@@ -2008,7 +2008,7 @@ function stepCar(car, input, dt) {
   vl -= Math.sign(vl) * latReduce;
   // tire scrub: the grip spent killing sideways motion drags the car back too — turning hard
   // costs speed.
-  vf -= Math.sign(vf) * Math.min(Math.abs(vf), latReduce * PHYS.scrub);
+  vf -= Math.sign(vf) * Math.min(Math.abs(vf), latReduce * PHYS.scrub * (input.handbrake ? 0.45 : 1));  // sliding tires scrub less — gripping pays full corner tax, drifting doesn't
   // sliding rubber burns speed: the bigger the slide, the harder the bleed (the drift debuff —
   // you drift for the line and the clip, not for free pace)
   if (input.handbrake)
