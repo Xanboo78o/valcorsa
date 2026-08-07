@@ -2045,6 +2045,15 @@ function stepCar(car, input, dt) {
   car.velZ = fZ * vf + rZ * vl;
   if (speed < 0.4 && input.throttle === 0 && input.brake === 0) { car.velX = 0; car.velZ = 0; }
 
+  // Cầu Nổi (Đồi Chó Nhảy): the floating straight sways underwheel — learnable, never unfair
+  if (!track.open && track.def && track.def.pontoon) {
+    const pf = car.idx / track.N;
+    if (pf >= track.def.pontoon[0] && pf <= track.def.pontoon[1]) {
+      const sway = Math.cos(raceTime * 1.15 + car.z * 0.04) * 2.4 * dt;
+      car.velX += Math.cos(car.heading) * sway;
+      car.velZ += -Math.sin(car.heading) * sway;
+    }
+  }
   // coastal wind (The Skirl): a hand on every kart, gusting, never gone
   if (!track.open && track.def && track.def.wind) {
     const g = 0.65 + 0.35 * Math.sin(raceTime * 0.7 + car.x * 0.01);
@@ -2355,6 +2364,28 @@ function startGame(def, m) {
     const floods = new THREE.AmbientLight(0xdde9ff, hardMode ? 0.3 : 1.7);
     floods.name = 'venueFloods';
     scene.add(floods);
+  }
+  // the golden dog (Đồi Chó Nhảy): the nation's most beloved landmark, mid-jump forever
+  if (def.dogStatue) {
+    const g = new THREE.Group();
+    const gold = new THREE.MeshStandardMaterial({ color: 0xd9a824, roughness: 0.35, metalness: 0.6, emissive: 0x3a2a00 });
+    const box = (w, h, d, x, y, z, rx) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), gold);
+      m.position.set(x, y, z); if (rx) m.rotation.x = rx; g.add(m); };
+    box(3.2, 2.6, 6.4, 0, 6.4, 0, -0.35);            // body, tilted mid-leap
+    box(2.2, 2.2, 2.6, 0, 8.6, 3.6);                 // head
+    box(0.7, 0.7, 1.4, -0.8, 10.0, 4.4, -0.5);       // ear
+    box(0.7, 0.7, 1.4, 0.8, 10.0, 4.4, -0.5);        // ear
+    box(0.8, 3.2, 0.8, -1.0, 4.2, -2.6, 0.5);        // hind legs stretched
+    box(0.8, 3.2, 0.8, 1.0, 4.2, -2.6, 0.5);
+    box(0.8, 2.8, 0.8, -1.0, 5.6, 2.4, -0.6);        // front paws tucked
+    box(0.8, 2.8, 0.8, 1.0, 5.6, 2.4, -0.6);
+    box(0.6, 0.6, 3.0, 0, 7.6, -4.2, 0.7);           // the tail, flying
+    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 5.0, 3.2, 10),
+      new THREE.MeshStandardMaterial({ color: 0x8a8a92, roughness: 0.9 }));
+    plinth.position.y = 1.6; g.add(plinth);
+    g.position.set(def.dogStatue[0], def.dogStatue[2] || 0, def.dogStatue[1]);
+    g.rotation.y = 0.6;
+    scene.add(g);
   }
   // fork divider island: a glowing barrier down the middle of every laneZone
   if (def.laneZones) for (const z of def.laneZones) {

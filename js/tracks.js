@@ -148,6 +148,33 @@ const TRACKS = [
     ],
   },
   {
+    // FORGE 5 of 32 — 10-Q session. Con chó country: the jumping dog's home ground.
+    id: 'doichonhay',
+    name: 'Đồi Chó Nhảy',
+    mode: 'SMASHKART',
+    desc: 'Jumping Dog Hill — where the legend leapt. Down the terrace staircase, across Cầu Nổi while it breathes beneath you, past the golden dog, and climb home. 3 laps.',
+    width: 26,
+    hills: 0.3,
+    surface: 'asphalt',
+    env: 'forest',
+    laps: 3,
+    pontoon: [0.50, 0.63],                           // Cầu Nổi
+    surfaceZones: [[0.50, 0.63, 'wet']],             // wet wood underwheel
+    dogStatue: [80, 40, 42],                         // the golden dog crowns the top terrace
+    points: [
+      // the top terrace — start under the dog's gaze
+      [0, 0, 40], [160, 0, 40], [300, -40, 36],
+      // the staircase east: drop, run, drop
+      [260, -140, 35], [380, -200, 30], [320, -300, 29], [420, -380, 24],
+      [340, -460, 22], [220, -520, 17], [100, -560, 12],
+      // CẦU NỔI — the floating straight across the terrace water
+      [-40, -580, 6], [-200, -585, 6], [-360, -580, 6],
+      // the climb home, west side
+      [-460, -520, 12], [-420, -420, 18], [-500, -330, 23], [-440, -240, 29],
+      [-360, -160, 33], [-260, -80, 37], [-120, -30, 40],
+    ],
+  },
+  {
     // FORGE 4 of 32 — 10-Q session. The Scottish cliff coast: the old feud.
     id: 'theskirl',
     name: 'The Skirl',
