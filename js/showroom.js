@@ -12,11 +12,13 @@
     if (!menu || $('showroomWrap')) return;
     const wrap = document.createElement('div');
     wrap.id = 'showroomWrap';
+    const stage = $('showroomStage');            // Adam's homepage: the kart HUGE, left side
+    if (stage) { wrap.classList.add('staged'); stage.appendChild(wrap); }
+    else menu.appendChild(wrap);
     wrap.innerHTML = '<canvas id="showroomCv"></canvas><div id="showroomChip"></div>';
-    menu.appendChild(wrap);
     R = new THREE.WebGLRenderer({ canvas: $('showroomCv'), alpha: true, antialias: true });
     R.setPixelRatio(Math.min(devicePixelRatio, 2));
-    R.setSize(360, 240, false);
+    R.setSize(stage ? 720 : 360, stage ? 480 : 240, false);
     R.outputColorSpace = THREE.SRGBColorSpace;
     scene = new THREE.Scene();
     scene.add(new THREE.AmbientLight(0x8fa8e8, 0.55));

@@ -145,10 +145,12 @@ window.ECON = (() => {
   }
 
   // ---- pack opening ceremony ----
-  function openPack(sponsorId) {
+  function openPack(sponsorId, free) {
     const s = SPONSORS.find(x => x.id === sponsorId);
-    if (money() < s.cost) { toast('Not enough Corsas — go race!'); return; }
-    setMoney(money() - s.cost);
+    if (!free) {
+      if (money() < s.cost) { toast('Not enough Corsas — go race!'); return; }
+      setMoney(money() - s.cost);
+    }
     const pulls = Array.from({ length: s.pulls }, () => rollPart(s));
     const ov = document.createElement('div');
     ov.id = 'packReveal';
@@ -520,6 +522,46 @@ window.ECON = (() => {
     }
     showDoors();
   }
+
+  // ---- PACKS ARE WON, NOT JUST BOUGHT (Adam's law): finish a race, rip a pack.
+  // Tier rides your finishing position; the rip button lives on the results board
+  // (re-injected each render — live results rebuild the board while bots finish).
+  const PACK_BY_POS = pos => pos <= 1 ? 'valcorsa' : pos <= 3 ? 'chanes' : pos <= 6 ? 'basil' : 'xb78';
+  const prevER = window.endRace;
+  if (prevER && !prevER._packs) {
+    const wrapped = function (...a) {
+      const r = prevER.apply(this, a);
+      try {
+        if (state === 'race' && player && player.isPlayer && player.finished && !(window.ARENA && ARENA.active)) {
+          const pos = cars.filter(c => c.finished).length;   // finishers at my line-cross = my position
+          localStorage.setItem('vc_pendingpack', PACK_BY_POS(pos));
+        }
+      } catch (e) {}
+      return r;
+    };
+    wrapped._packs = true;
+    window.endRace = wrapped;
+  }
+  setInterval(() => {
+    const id = localStorage.getItem('vc_pendingpack');
+    if (!id) return;
+    const res = document.getElementById('results');
+    const inner = res && res.querySelector('.resInner');
+    if (inner && res.style.display !== 'none' && !document.getElementById('ripBtn')) {
+      const b = document.createElement('button');
+      b.id = 'ripBtn';
+      const sp = SPONSORS.find(x => x.id === id);
+      b.textContent = 'YOU WON A PARTSPACK — RIP IT (' + (sp ? sp.name : id).toUpperCase() + ')';
+      b.onclick = () => { localStorage.removeItem('vc_pendingpack'); openPack(id, true); };
+      inner.appendChild(b);
+    }
+    // skipped the results? the pack rips itself on the next paddock visit
+    const menu = document.getElementById('menu');
+    if (menu && menu.style.display !== 'none' && (!res || res.style.display === 'none') && !document.getElementById('packReveal')) {
+      localStorage.removeItem('vc_pendingpack');
+      openPack(id, true);
+    }
+  }, 1000);
 
   refreshBalance();   // boot injects us after DOMContentLoaded — refresh now
   return { money, racePayout, refreshBalance, openPack, give, inv, cards, mods, garageUI, activeEngine,

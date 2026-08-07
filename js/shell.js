@@ -26,11 +26,14 @@
     if (modalOpen('settingsModal')) return 'settings';
     if (modalOpen('garageModal')) return 'garage';
     if (modalOpen('shopModal')) return 'shop';
-    if (modalOpen('teamsModal')) return 'teams';
+    const ts = $('teamsScreen');
+    if (ts && ts.style.display === 'block') return 'teams';
     const ss = $('seasonScreen');
     if (ss && ss.style.display === 'block') return 'season';
     const v = $('venuesMenu');
-    return (v && v.style.display !== 'none') ? 'venues' : 'home';
+    if (v && v.style.display !== 'none') return 'venues';
+    const f = $('funMenu');
+    return (f && f.style.display !== 'none') ? 'fun' : 'home';
   }
   window.vcTabSync = function () {
     const cur = current();
@@ -40,14 +43,15 @@
     if (modalOpen('garageModal') && tab !== 'garage') closeGarage();
     if (modalOpen('shopModal') && tab !== 'shop') closeShop();
     if (modalOpen('settingsModal') && tab !== 'settings') closeSettings();
-    if (modalOpen('teamsModal') && tab !== 'teams' && window.closeTeams) closeTeams();
+    { const ts = $('teamsScreen'); if (ts && ts.style.display === 'block' && tab !== 'teams' && window.closeTeams) closeTeams(); }
     if (tab !== 'season' && window.closeSeason) { const ss = $('seasonScreen'); if (ss && ss.style.display === 'block') closeSeason(); }
     if (tab === 'home') hideVenues();
     else if (tab === 'venues') showVenues();
     else if (tab === 'garage') { if (!modalOpen('garageModal')) openGarage(); }
     else if (tab === 'shop') { if (!modalOpen('shopModal')) openShop(); }
     else if (tab === 'settings') { if (!modalOpen('settingsModal')) openSettings(); }
-    else if (tab === 'teams') { if (!modalOpen('teamsModal') && window.openTeams) openTeams(); }
+    else if (tab === 'fun') { if (typeof showFun === 'function') showFun(); }
+    else if (tab === 'teams') { const ts = $('teamsScreen'); if (!(ts && ts.style.display === 'block') && window.openTeams) openTeams(); }
     else if (tab === 'season') { const ss = $('seasonScreen'); if (!(ss && ss.style.display === 'block') && window.openSeason) openSeason(); }
     vcTabSync();
   };
@@ -63,11 +67,11 @@
     vcTabSync();
   }
   const mo = new MutationObserver(updateBar);
-  ['menu', 'accountScreen', 'garageModal', 'settingsModal', 'pairModal', 'venuesMenu', 'teamsModal', 'seasonScreen'].forEach(id => {
+  ['menu', 'accountScreen', 'garageModal', 'settingsModal', 'pairModal', 'venuesMenu', 'teamsScreen', 'seasonScreen', 'funMenu'].forEach(id => {
     const el = $(id); if (el) mo.observe(el, { attributes: true, attributeFilter: ['style'] });
   });
   const bodyMo = new MutationObserver(() => {           // shop/teams/season modals are built lazily
-    for (const id of ['shopModal', 'teamsModal', 'seasonScreen']) {
+    for (const id of ['shopModal', 'teamsScreen', 'seasonScreen']) {
       const m = $(id);
       if (m && !m._observed) { m._observed = true; mo.observe(m, { attributes: true, attributeFilter: ['style'] }); updateBar(); }
     }

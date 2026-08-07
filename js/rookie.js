@@ -131,8 +131,6 @@ window.ROOKIE = (() => {
     document.querySelectorAll('#tabBar button').forEach(b => {
       b.style.display = (!allowed || allowed.includes(b.dataset.tab)) ? '' : 'none';
     });
-    // home clutter: the daily card + nav row + injected buttons wait until graduation
-    ['schedCard', 'diffRow'].forEach(id => { const el = $(id); if (el) el.style.display = rookie ? 'none' : ''; });
     const qr = $('quickRace');
     if (qr) qr.classList.toggle('rkGlow', s === '0');
   }
@@ -244,12 +242,12 @@ window.ROOKIE = (() => {
     watchModal('settingsModal', null,
       () => { if (stage() === '3') { setStage('4'); setTimeout(() =>
         unlockTab('teams', { html: '<b>New door: TEAMS.</b> Start one with your friends or join with a code — your points bank together in the constructors standings. Racing alone is fine. Racing as a squad is a WAR.' }), 400); } });
-    watchModal('teamsModal', null,
+    watchModal('teamsScreen', null,
       () => { if (stage() === '4') { setStage('5'); setTimeout(() =>
         unlockTab('season', { html: '<b>Last door: THE SEASON.</b> Valcorsa races every day — every scheduled grid banks points to the league table. This is the whole country’s scoreboard. Go look at it.' }), 400); } });
     watchModal('seasonScreen', null,
       () => { if (stage() === '5') { setStage('done');
-        setTimeout(() => bubble('<b>That’s Valcorsa.</b> The daily card is on your home screen now — tonight, <b class="rkOrange">THE OPEN</b>, 20 karts, 8:30. Be there.<br><span class="rkDim">— welcome to the home of racing</span>'), 400); } });
+        setTimeout(() => bubble('<b>That’s Valcorsa.</b> The daily card lives in THE SEASON now — tonight, <b class="rkOrange">THE OPEN</b>, 20 karts, 8:30. Be there.<br><span class="rkDim">— welcome to the home of racing</span>'), 400); } });
   }
 
   // ---- endRace hook: finishing the rookie race opens the garage ----
