@@ -26,15 +26,15 @@
   <div class="smear q1"></div><div class="smear q2"></div>
   <div class="smear q3"></div><div class="smear q4"></div>
   <div class="introBrand"><div class="iFlag"></div><h1>VALCORSA</h1><p>HOME OF RACING</p></div>
-  <div id="introGate"><div class="gFlag"><i></i><i></i><i></i><i></i></div><p>TAP IN</p></div>
 </div>
 <script>
 (function () {
   const ov = document.getElementById('introSplash');
   if (sessionStorage.getItem('vc_intro')) { ov.remove(); return; }
   sessionStorage.setItem('vc_intro', '1');
-  // The gate tap is the audio unlock: browsers only allow sound after a gesture,
-  // so the cars stay silent until someone taps in.
+  // Browsers keep audio locked until a real touch — the intro runs immediately,
+  // and the first tap joins the engine noise mid-flight instead of skipping.
+  // iOS only counts touchend (not pointerdown) as the unlock gesture.
   let actx = null, roar = null;
   try {
     actx = new (window.AudioContext || window.webkitAudioContext)();
@@ -69,24 +69,29 @@
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
     o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + 0.75);
   };
-  const end = () => { ov.classList.add('out'); setTimeout(() => { ov.remove(); if (actx) actx.close().catch(() => {}); }, 500); };
-  let began = false;
-  const start = () => {
-    if (began) return; began = true;
-    const gate = document.getElementById('introGate');
-    if (gate) gate.classList.add('gone');
-    ov.classList.add('run');
-    if (actx) actx.resume().catch(() => {});
-    fly(0.24, 1.0, true); fly(0.66, 1.14, false); fly(1.03, 0.9, true); fly(1.36, 1.28, false);
-    boom(1.88);
-    ov.addEventListener('pointerdown', end);
-    setTimeout(end, 4200);
+  const FLY_T = [0.24, 0.66, 1.03, 1.36], FLY_R = [1, 1.14, 0.9, 1.28], BOOM_T = 1.88;
+  const soundFrom = (el) => {                 // play whatever noise is still ahead of the animation
+    FLY_T.forEach((ft, i) => { if (ft >= el - 0.08) fly(Math.max(0.02, ft - el), FLY_R[i], i % 2 === 0); });
+    if (BOOM_T >= el - 0.08) boom(Math.max(0.02, BOOM_T - el));
   };
-  ov.addEventListener('pointerdown', function gateTap() {
-    ov.removeEventListener('pointerdown', gateTap);
-    start();
+  let t0 = performance.now(), soundOn = false;
+  requestAnimationFrame(() => { t0 = performance.now(); ov.classList.add('run'); });
+  const end = () => { ov.classList.add('out'); setTimeout(() => { ov.remove(); if (actx) actx.close().catch(() => {}); }, 500); };
+  const tryUnlock = () => {
+    if (!actx || soundOn) return;
+    actx.resume().then(() => {
+      if (soundOn || actx.state !== 'running') return;
+      soundOn = true;
+      soundFrom((performance.now() - t0) / 1000 + 0.03);
+    }).catch(() => {});
+  };
+  ov.addEventListener('pointerdown', () => {
+    const el = (performance.now() - t0) / 1000;
+    if (el < 1.8 && !soundOn && actx && actx.state !== 'running') { tryUnlock(); return; }
+    end();                                    // late tap, or sound already going: skip
   });
-  setTimeout(start, 9000);                    // nobody taps? run it anyway (muted by the browser)
+  ov.addEventListener('touchend', tryUnlock); // iOS: this is the event that actually unlocks audio
+  setTimeout(end, 4200);
 })();
 </script>
 

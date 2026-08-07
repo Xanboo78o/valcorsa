@@ -1845,16 +1845,3 @@ body.tabsOn #shopModal .storeFront { max-height: calc(100dvh - 92px); margin-bot
 .prodStats .loBar.bad i { background: #ff8c1a; }
 .prodStats .loBar em { font-size: 8px; min-width: 14px; color: #2a3a58; }
 
-/* ---- INTRO GATE (the tap that unlocks the flyby sound) ---- */
-#introGate { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 20px; }
-#introGate .gFlag { width: 36px; height: 36px; display: grid;
-  grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
-  outline: 1.5px solid rgba(255,255,255,.7); outline-offset: 3px; }
-#introGate .gFlag i:nth-child(1), #introGate .gFlag i:nth-child(4) { background: #ff8c1a; }
-#introGate .gFlag i:nth-child(2), #introGate .gFlag i:nth-child(3) { background: #2e6bff; }
-#introGate p { font-family: 'Archivo Black', sans-serif; font-size: 21px; letter-spacing: 7px;
-  padding-left: 7px; color: #eef3ff; text-shadow: 0 0 16px rgba(46,107,255,.85);
-  animation: gatePulse 1.4s ease-in-out infinite; }
-@keyframes gatePulse { 50% { opacity: .4; } }
-#introGate.gone { display: none; }
