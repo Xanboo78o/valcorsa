@@ -1,0 +1,1525 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0b0d10; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: #f2f2f2; user-select: none;
+}
+#game { position: fixed; inset: 0; }
+canvas { display: block; }
+
+/* ---------------- HUD ---------------- */
+#hud { display: none; position: fixed; inset: 0; pointer-events: none; }
+#hudTop {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 16px 22px;
+}
+#posBox { text-align: left; }
+#position {
+  font-size: 30px; font-weight: 800; letter-spacing: 1px;
+  text-shadow: 0 2px 8px rgba(0,0,0,.7);
+}
+#lapCount { font-size: 15px; opacity: .85; margin-top: 2px; text-shadow: 0 1px 4px #000; }
+#trackLabel {
+  font-size: 16px; font-weight: 600; opacity: .8; letter-spacing: 2px;
+  text-transform: uppercase; margin-top: 8px; text-shadow: 0 1px 4px #000;
+}
+#timeBox { text-align: right; font-variant-numeric: tabular-nums; }
+#curLap.big {
+  font-size: 30px; font-weight: 700; letter-spacing: .5px;
+  text-shadow: 0 2px 8px rgba(0,0,0,.7);
+}
+#lastLap, #bestLap { font-size: 14px; opacity: .82; text-shadow: 0 1px 4px #000; }
+#bestLap { color: #e2b654; }
+
+#speedBox {
+  position: absolute; bottom: 18px; right: 30px; text-align: right;
+  text-shadow: 0 2px 3px #000, 0 4px 16px rgba(0,0,0,.9);
+}
+#speed { font-size: 110px; font-weight: 900; font-variant-numeric: tabular-nums; line-height: .82;
+  -webkit-text-stroke: 2px rgba(0,0,0,.45); }
+.unit { font-size: 30px; font-weight: 700; opacity: .82; margin-left: 4px; }
+/* running leaderboard (races) */
+#leaderboard {
+  position: absolute; top: 92px; right: 20px; display: none; flex-direction: column; gap: 3px; width: 216px;
+}
+#leaderboard .lbRow {
+  display: flex; align-items: center; gap: 8px; background: rgba(10,14,20,.52);
+  border-radius: 7px; padding: 5px 10px; font-size: 15px; font-weight: 800;
+  text-shadow: 0 1px 3px #000; backdrop-filter: blur(2px); line-height: 1.1;
+}
+#leaderboard .lbRow.me { background: rgba(226,59,46,.62); box-shadow: 0 0 0 1px rgba(255,255,255,.35); }
+#leaderboard .lbRow.done { opacity: .72; }
+#leaderboard .pos { width: 20px; text-align: right; color: #a9c0d6; font-variant-numeric: tabular-nums; }
+#leaderboard .lbRow.me .pos { color: #f8f4e8; }
+#leaderboard .sw { width: 11px; height: 11px; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.4); flex: none; }
+#leaderboard .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+#minimap {
+  position: absolute; bottom: 22px; left: 24px; width: 230px; height: 166px;
+  background: rgba(12,16,22,.55); border: 1px solid rgba(255,255,255,.15);
+  border-radius: 10px; padding: 4px; backdrop-filter: blur(3px);
+}
+#hint {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  font-size: 12px; opacity: .5; white-space: nowrap;
+}
+
+/* ---------------- Account screen ---------------- */
+#accountScreen {
+  display: none; position: fixed; inset: 0; z-index: 60;
+  align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 20%, #1a2436 0%, #0b0d10 70%);
+}
+.acctBox { display: flex; flex-direction: column; gap: 14px; align-items: center; max-width: 360px; margin: 0 auto; }
+#usernameInput {
+  font-family: inherit; font-size: 22px; font-weight: 600; text-align: center;
+  width: 100%; padding: 14px 18px; border-radius: 12px; border: 2px solid #333;
+  background: #1c241f; color: #f8f4e8; outline: none;
+}
+#usernameInput:focus { border-color: #1e5741; }
+#usernameInput.shake { animation: shake .35s; border-color: #e23b2e; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+.acctBox button { min-width: 220px; }
+.acctNote { font-size: 12px; opacity: .5; max-width: 320px; line-height: 1.5; }
+
+/* ---------------- Account chip ---------------- */
+#acctChip {
+  display: none; position: fixed; top: 16px; right: 18px; z-index: 55;
+  align-items: center; gap: 12px;
+  background: rgba(20,23,28,.85); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 30px; padding: 7px 8px 7px 16px; backdrop-filter: blur(6px);
+}
+#acctChip .acctText { font-size: 13px; opacity: .9; }
+#acctChip .acctText b { color: #f8f4e8; }
+#acctChip button { font-size: 13px; padding: 8px 14px; background: #1e5741; border-radius: 22px; }
+#acctChip button:hover { background: #2e7a5c; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot.off { background: #6b7178; }
+.dot.on { background: #3fae76; box-shadow: 0 0 8px #3fae76; }
+
+/* ---------------- Pair modal ---------------- */
+#pairModal {
+  display: none; position: fixed; inset: 0; z-index: 65;
+  align-items: center; justify-content: center;
+  background: rgba(8,10,14,.75); backdrop-filter: blur(5px);
+}
+#pairModal .panel { max-width: 380px; }
+#pairModal p { font-size: 14px; opacity: .8; margin: 4px 0; }
+
+#settingsBtn { background: #242e27; border: 1px solid #46534a; border-radius: 24px; padding: 9px 22px; font-size: 14px; margin-left: 10px; }
+#settingsBtn:hover { background: #2f3a32; }
+#settingsModal {
+  display: none; position: fixed; inset: 0; z-index: 70;
+  align-items: flex-start; justify-content: center;
+  background: rgba(8,10,14,.78); backdrop-filter: blur(6px); overflow-y: auto; padding: 20px;
+}
+.settingsPanel { max-width: 460px; width: 100%; text-align: left; gap: 18px; }
+.settingsPanel h2 { text-align: center; }
+.setSection h3 { font-size: 15px; letter-spacing: .5px; text-transform: uppercase; opacity: .75; margin-bottom: 8px; }
+.setNote { font-size: 12.5px; opacity: .6; margin: 6px 0; }
+#vehicleGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.vehBtn { min-width: 0 !important; background: #1c241f !important; border: 1px solid #2f3a32; border-radius: 10px; padding: 12px 10px; font-size: 14px; }
+.vehBtn:hover { background: #242e27 !important; }
+.vehBtn.sel { background: #1e5741 !important; border-color: #7fb89d; }
+.segRow { display: flex; gap: 8px; flex-wrap: wrap; }
+.segRow button { flex: 1; min-width: 120px !important; background: #1c241f !important; border: 1px solid #2f3a32; border-radius: 10px; padding: 11px 8px; font-size: 13px; }
+.segRow button:hover { background: #242e27 !important; }
+.segRow button.sel { background: #1e5741 !important; border-color: #7fb89d; }
+#pairPedalBtn { background: #16351f !important; border: 1px solid #2f7a45 !important; border-radius: 10px; }
+#pairPedalBtn:hover { background: #1d4a2b !important; }
+#pairBrakeBtn { background: #351616 !important; border: 1px solid #7a2f2f !important; border-radius: 10px; }
+#pairBrakeBtn:hover { background: #4a1d1d !important; }
+#gasStatus, #brakeStatus { display: block; }
+#pedalMon { font: 11px/1.5 monospace; color: #6cf; background: #0b0f14; border: 1px solid #223; border-radius: 8px; padding: 8px 10px; margin-top: 8px; word-break: break-all; }
+#blurSlider {
+  width: 100%; accent-color: #1e5741; height: 26px; cursor: pointer;
+}
+#pauseWManual button, #wManualRow button { min-width: 56px !important; font-size: 17px; }
+#pause .setSection { text-align: left; }
+#pause .setSection h3 { font-size: 13px; letter-spacing: .5px; text-transform: uppercase; opacity: .7; margin-bottom: 7px; }
+.settingsPanel .closeSet { background: #242e27 !important; align-self: center; margin-top: 6px; }
+.pairUrl {
+  font-family: monospace; font-size: 14px; background: #0c0e12; padding: 10px;
+  border-radius: 8px; word-break: break-all; border: 1px solid rgba(255,255,255,.1);
+}
+#pairQR { border-radius: 10px; background: #fff; padding: 8px; margin: 6px auto; display: block; }
+.pairCode {
+  font-size: 40px; font-weight: 900; letter-spacing: 8px; color: #e2b654;
+  font-family: monospace; margin: 2px 0;
+}
+.pairStatus {
+  font-size: 15px; font-weight: 600; padding: 8px; border-radius: 8px;
+  background: #1a1e24; margin: 8px 0;
+}
+.pairStatus.ok { background: #16351f; color: #7ee59a; }
+
+/* ---------------- First-person windshield (your real wheel is the wheel) ---------------- */
+#fpOverlay { position: fixed; inset: 0; pointer-events: none; z-index: 12; display: none; }
+#fpOverlay.on { display: block; }
+#fpOverlay .vig { position: absolute; inset: 0; box-shadow: inset 0 0 240px 60px rgba(0,0,0,.55); }
+#fpOverlay .pillarL, #fpOverlay .pillarR {
+  position: absolute; top: -6%; bottom: -6%; width: 7vw;
+  background: linear-gradient(90deg, #07080a 55%, #101216 82%, transparent 100%);
+}
+#fpOverlay .pillarL { left: -2vw; transform: skewX(-7deg); }
+#fpOverlay .pillarR { right: -2vw; transform: skewX(7deg) scaleX(-1); }
+#fpOverlay .headliner {
+  position: absolute; top: -2%; left: 0; right: 0; height: 9%;
+  background: linear-gradient(180deg, #07080a 40%, rgba(7,8,10,.85) 70%, transparent 100%);
+  border-radius: 0 0 45% 45% / 0 0 100% 100%;
+}
+#fpOverlay .glassGlare {
+  position: absolute; inset: 0; opacity: .5;
+  background: linear-gradient(112deg, transparent 30%, rgba(210,225,245,.05) 38%, rgba(210,225,245,.1) 43%, transparent 52%, transparent 64%, rgba(210,225,245,.05) 70%, transparent 78%);
+}
+#toast {
+  position: fixed; top: 76px; left: 50%; transform: translateX(-50%);
+  font-size: 17px; font-weight: 600; letter-spacing: .5px;
+  background: rgba(12,16,22,.7); padding: 7px 18px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.14); opacity: 0; transition: opacity .3s;
+  pointer-events: none; z-index: 15; text-shadow: 0 1px 3px #000;
+}
+#countdown {
+  display: none; position: fixed; top: 38%; left: 0; right: 0; text-align: center;
+  font-size: 130px; font-weight: 900; color: #f8f4e8; pointer-events: none;
+  text-shadow: 0 4px 30px rgba(0,0,0,.8); z-index: 20;
+}
+#perfHud {
+  display: none; position: fixed; top: 8px; left: 8px; z-index: 40;
+  font: 12px/1.55 ui-monospace, Menlo, Consolas, monospace; white-space: pre;
+  color: #9fe870; background: rgba(8,10,14,.78); padding: 8px 11px;
+  border-radius: 8px; border: 1px solid rgba(159,232,112,.25);
+  pointer-events: none; text-shadow: none;
+}
+
+/* ---------------- Menu (sim style: dark glass over the live 3D scene) ---------------- */
+#menu {
+  position: fixed; inset: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, rgba(9,12,18,.94) 0%, rgba(12,16,26,.9) 45%, rgba(8,10,14,.96) 100%);
+  overflow-y: auto;
+}
+.menuInner { max-width: 1060px; padding: 40px 24px; text-align: center; }
+h1 {
+  font-size: 64px; font-weight: 200; letter-spacing: 14px;
+  color: #f8f4e8; text-transform: uppercase;
+}
+h1 span { color: #c73a2c; font-weight: 800; }
+.tagline { opacity: .65; margin: 6px 0 18px; font-size: 17px; letter-spacing: 1px; }
+#diffRow { margin: 0 0 26px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+#diffRow button { margin: 0 !important; }
+#openWorldBtn { background: #1c3a5c; border: 1px solid #3a6ea5; border-radius: 24px; padding: 9px 22px; font-size: 14px; }
+#openWorldBtn:hover { background: #27527f; }
+#hardBtn { background: #242e27; border: 1px solid #46534a; border-radius: 24px; padding: 9px 22px; font-size: 14px; letter-spacing: .5px; }
+#hardBtn:hover { background: #2f3a32; }
+#hardBtn.hard { background: #c73a2c; border-color: #ff6a5a; }
+#hardBtn.hard:hover { background: #c73a2c; }
+#trackGrid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px; margin-bottom: 24px;
+}
+.card {
+  background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
+  border-radius: 14px; padding: 14px; transition: transform .12s, border-color .12s;
+}
+.card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,.28); }
+.card canvas {
+  width: 100%; height: auto; background: rgba(0,0,0,.25); border-radius: 8px;
+}
+.cardName { font-size: 17px; font-weight: 700; margin-top: 10px; }
+.cardMode {
+  display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px; color: #0b0d12;
+  background: #9aa3b2;
+}
+.m-f1        { background: #c73a2c; color: #f8f4e8; }
+.m-speedkart { background: #c99a2e; }
+.m-rally     { background: #2e9d63; }
+.m-circuit   { background: #1e5741; color: #f8f4e8; }
+.m-smashkart { background: #c99a2e; color: #f8f4e8; }
+.m-finale    { background: linear-gradient(90deg,#c73a2c,#c99a2e,#2e9d63,#1e5741,#c99a2e); color: #f8f4e8; }
+.cardDesc { font-size: 13px; opacity: .6; margin: 4px 0 6px; min-height: 32px; }
+.cardBest { font-size: 12px; color: #e2b654; opacity: .9; margin-bottom: 10px; }
+.cardBtns { display: flex; gap: 8px; }
+.cardBtns button { flex: 1; }
+button {
+  font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  color: #f8f4e8; background: #c73a2c; border: none; border-radius: 8px;
+  padding: 9px 14px; transition: background .12s, transform .08s;
+}
+button:hover { background: #c73a2c; }
+button:active { transform: scale(.96); }
+.cardBtns button:last-child { background: #1e5741; }
+.cardBtns button:last-child:hover { background: #2e7a5c; }
+.footer { font-size: 13px; opacity: .5; margin-top: 8px; }
+
+/* ---------------- Pause & Results ---------------- */
+#pause, #results {
+  display: none; position: fixed; inset: 0; z-index: 40;
+  align-items: center; justify-content: center;
+  background: rgba(8,10,14,.72); backdrop-filter: blur(5px);
+}
+.panel, #results {
+  text-align: center;
+}
+.panel {
+  background: #141b17; border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px; padding: 34px 44px; display: flex; flex-direction: column; gap: 12px;
+  max-height: 88vh; max-height: 88dvh; overflow-y: auto;   /* never taller than the screen — landscape phones */
+}
+/* short landscape screens (phones): slim the chrome so everything fits without feeling giant */
+@media (max-height: 520px) {
+  .panel { padding: 14px 22px; gap: 7px; max-height: 94vh; max-height: 94dvh; }
+  .panel h2 { font-size: 20px; margin-bottom: 2px; }
+  .panel button { min-height: 34px; padding: 6px 12px; font-size: 13px; }
+  #pause .setSection h3 { margin-bottom: 3px; }
+}
+.panel h2, #results h2 { font-size: 30px; margin-bottom: 10px; }
+.panel button { min-width: 200px; background: #1e5741; }
+.panel button:hover { background: #2e7a5c; }
+.panel button:first-of-type { background: #c73a2c; }
+.panel button:first-of-type:hover { background: #c73a2c; }
+
+#results { flex-direction: column; overflow-y: auto; }
+/* safe-centering (same trick as .menuInner): centered when short, scrollable when tall */
+#results .resInner { margin: auto; padding: 3vh 12px calc(3vh + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: center; }
+#results table {
+  border-collapse: collapse; margin: 10px auto 20px; min-width: 420px;
+  background: #141b17; border-radius: 12px; overflow: hidden;
+}
+#results td { padding: 10px 18px; font-size: 15px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; }
+#results tr.me { background: rgba(255,210,62,.14); font-weight: 700; }
+#results td:first-child { font-weight: 800; opacity: .7; width: 40px; }
+#results td:nth-child(3), #results td:nth-child(4) { font-variant-numeric: tabular-nums; }
+.dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 9px; vertical-align: middle; }
+
+/* ---------------- Garage ---------------- */
+#chassisGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.swatchRow { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 10px; }
+.swatch {
+  width: 30px; height: 30px; min-width: 30px !important; border-radius: 50% !important;
+  border: 2px solid rgba(255,255,255,.18) !important; padding: 0 !important;
+}
+.swatch.sel { border-color: #f4ecdd !important; box-shadow: 0 0 0 2px #1e5741; }
+#wheelRow button, #decalRow button { min-width: 90px !important; font-size: 12.5px; }
+
+#kitPreview {
+  width: 100%; height: auto; aspect-ratio: 16/9; display: block;
+  border-radius: 12px; margin-bottom: 12px; background: #14181f;
+  border: 1px solid rgba(255,255,255,.1);
+}
+
+
+/* ---------------- Multi-screen ---------------- */
+#pillarFrames { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 14; }
+#pillarFrames .seamL, #pillarFrames .seamR {
+  position: absolute; top: 0; bottom: 0; width: 26px; transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, #0a0c0f 30%, #16181d 50%, #0a0c0f 70%, transparent);
+}
+#pillarFrames .seamL { left: 33.35%; }
+#pillarFrames .seamR { left: 66.7%; }
+body[data-screens="2"] #pillarFrames .seamL { left: 50%; }
+body[data-screens="2"] #pillarFrames .seamR { display: none; }
+/* HUD lives on the CENTER monitor when running multi-screen */
+body[data-screens="3"] #hudTop { left: 33.4%; right: 33.4%; }
+body[data-screens="3"] #speedBox { right: 34.5%; }
+body[data-screens="3"] #minimap { left: 34.5%; }
+body[data-screens="3"] #leaderboard { right: 34.5%; }
+body[data-screens="3"] #hint { display: none; }
+body[data-screens="2"] #hudTop { left: 0; right: 50%; }
+body[data-screens="2"] #speedBox { right: 51.5%; }
+body[data-screens="2"] #leaderboard { right: 51.5%; }
+
+/* ================================================================
+   VALCORSA IDENTITY — vintage grand-prix poster. Cream paper, racing
+   green, rosso, gold. Overrides the inherited Apex dark theme on all
+   menu surfaces; in-race HUD stays dark glass for readability.
+   ================================================================ */
+/* ═══ THE VALCORSA COLOR SCHEME (locked 2026-08-07) ═══════════════════════
+   Five colors + a night-workshop dark family. NO NEW HEXES — reach for a token.
+   paper (cream) = surfaces · ink = text (never #000 for text) · green = structure,
+   secondary buttons, selected states · red = the ONE hero action per screen ·
+   gold = accents, highlights, money, focus rings — never a large fill.
+   Night family = dark garage/HUD backgrounds (warm green-blacks, never cool slate).
+   Kart paints & AI liveries are CONTENT and may be any color. */
+:root {
+  --vc-paper: #f4ecdd;
+  --vc-paper2: #ece1cb;
+  --vc-paper-bright: #fdfaf1;
+  --vc-ink: #24271f;
+  --vc-green: #1e5741;
+  --vc-green-dk: #143d2e;
+  --vc-green-lt: #2e9d63;
+  --vc-red: #c73a2c;
+  --vc-gold: #c99a2e;
+  --vc-gold-bright: #e2b654;
+  --vc-night: #131b16;
+  --vc-night2: #1c241f;
+  --vc-night3: #242e27;
+}
+
+/* ---- homescreen ---- */
+#menu { align-items: flex-start; }
+#menu .menuInner { margin: auto; }   /* safe centering: centers when it fits, top-aligns when tall */
+#menu {
+  background:
+    repeating-linear-gradient(45deg, rgba(30,87,65,.035) 0 14px, transparent 14px 28px),
+    radial-gradient(circle at 50% -10%, #faf4e6 0%, var(--vc-paper) 55%, var(--vc-paper2) 100%);
+  color: var(--vc-ink);
+}
+#menu .flagStripe {
+  position: fixed; top: 0; left: 0; right: 0; height: 10px; z-index: 2;
+  background: linear-gradient(90deg, var(--vc-green) 0 33.4%, var(--vc-paper) 33.4% 66.7%, var(--vc-red) 66.7% 100%);
+  box-shadow: 0 1px 0 rgba(0,0,0,.15);
+}
+#menu .flagStripe.bottom { top: auto; bottom: 0; box-shadow: 0 -1px 0 rgba(0,0,0,.15); }
+.crest { margin-bottom: 2px; }
+#menu h1 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 64px; font-weight: 700; letter-spacing: 14px; text-indent: 14px;
+  color: var(--vc-green); text-shadow: 2px 2px 0 rgba(201,154,46,.35);
+}
+#menu .tagline {
+  opacity: 1; color: var(--vc-red); font-weight: 800; font-size: 15px;
+  letter-spacing: 7px; text-indent: 7px; margin: 2px 0 6px;
+}
+#menu .subline { color: var(--vc-ink); opacity: .62; font-size: 14px; margin-bottom: 18px; font-style: italic; }
+#menu .sectionHead {
+  color: var(--vc-green); font-weight: 800; letter-spacing: 5px; font-size: 13px;
+  margin: 22px 0 4px;
+}
+#menu .footer { color: var(--vc-ink); opacity: .5; }
+#menu .footer b { color: var(--vc-green-dk); }
+
+/* nav buttons */
+#menu .navBtn {
+  background: transparent; color: var(--vc-green);
+  border: 2px solid var(--vc-green); border-radius: 10px; font-weight: 700;
+}
+#menu .navBtn:hover { background: var(--vc-green); color: var(--vc-paper); }
+#menu #hardBtn.hard { border-color: var(--vc-red); color: var(--vc-red); }
+#menu #hardBtn.hard:hover { background: var(--vc-red); color: var(--vc-paper); }
+
+/* venue cards: framed poster prints */
+#menu .card {
+  background: #faf4e6; border: 1px solid rgba(36,39,31,.25);
+  box-shadow: 0 2px 0 rgba(36,39,31,.12), 0 10px 22px rgba(36,39,31,.10);
+  color: var(--vc-ink);
+}
+#menu .card:hover { border-color: var(--vc-gold); transform: translateY(-3px); }
+#menu .card canvas { background: #182018; border: 3px solid var(--vc-green-dk); border-radius: 6px; }
+#menu .cardName { font-family: Georgia, serif; color: var(--vc-green-dk); }
+#menu .cardDesc { opacity: .68; }
+#menu .cardBest { color: #8a6d1a; }
+#menu .cardBtns button { background: var(--vc-green); color: var(--vc-paper); }
+#menu .cardBtns button:hover { background: var(--vc-green-dk); }
+#menu .cardBtns button:first-child { background: var(--vc-red); }
+#menu .cardBtns button:first-child:hover { background: #a52d21; }
+
+/* mode badges, poster tones */
+#menu .cardMode { color: var(--vc-paper); letter-spacing: 2px; }
+#menu .m-f1        { background: var(--vc-red); }
+#menu .m-speedkart { background: var(--vc-gold); color: #2c2410; }
+#menu .m-rally     { background: var(--vc-green); }
+#menu .m-circuit   { background: #236349; }
+#menu .m-smashkart { background: #a3782a; }
+#menu .m-finale    { background: linear-gradient(90deg,#c73a2c,#c99a2e,#1e5741,#236349,#a3782a); }
+
+/* ---- account screen: same poster ---- */
+#accountScreen {
+  background:
+    repeating-linear-gradient(45deg, rgba(30,87,65,.035) 0 14px, transparent 14px 28px),
+    radial-gradient(circle at 50% 20%, #faf4e6 0%, var(--vc-paper2) 75%);
+  color: var(--vc-ink);
+}
+#accountScreen h1 {
+  font-family: Georgia, serif; color: var(--vc-green);
+  letter-spacing: 12px; text-indent: 12px; text-shadow: 2px 2px 0 rgba(201,154,46,.35);
+}
+#accountScreen h1 span { color: var(--vc-green); }
+#accountScreen .tagline { color: var(--vc-red); opacity: 1; font-weight: 700; letter-spacing: 2px; }
+#accountScreen #usernameInput {
+  background: #fffaf0; color: var(--vc-ink); border-color: rgba(36,39,31,.35);
+}
+#accountScreen #usernameInput:focus { border-color: var(--vc-green); }
+#accountScreen .acctBox button { background: var(--vc-red); }
+#accountScreen .acctBox button:hover { background: #a52d21; }
+#accountScreen .acctNote { color: var(--vc-ink); opacity: .55; }
+
+/* account chip on the cream menu */
+#acctChip {
+  background: rgba(250,244,230,.92); border: 1.5px solid var(--vc-green);
+  color: var(--vc-ink);
+}
+#acctChip .acctText, #acctChip .acctText b { color: var(--vc-green-dk); }
+#acctChip button { background: var(--vc-green); }
+#acctChip button:hover { background: var(--vc-green-dk); }
+
+/* ---- the Garage: night workshop ---- */
+#garageModal {
+  display: none; position: fixed; inset: 0; z-index: 70;
+  align-items: center; justify-content: center;
+  background: rgba(12,16,13,.78); backdrop-filter: blur(4px);
+}
+.garagePanel {
+  width: min(560px, 94vw); max-height: 92vh; overflow-y: auto;
+  background: linear-gradient(180deg, #16211a 0%, #101913 100%);
+  border: 1px solid rgba(201,154,46,.45); border-top: 6px solid var(--vc-gold);
+  border-radius: 14px; padding: 22px 26px; text-align: center;
+}
+.garagePanel h2 { font-family: Georgia, serif; color: var(--vc-paper); letter-spacing: 2px; }
+.garageSub { font-size: 13px; color: #cdbf9c; margin: 6px 0 12px; line-height: 1.5; }
+.garageNote { opacity: .55; font-style: italic; }
+.garagePanel #kitPreview {
+  width: 100%; border-radius: 10px; border: 1px solid rgba(201,154,46,.3);
+}
+.garagePanel .setNote {
+  color: var(--vc-gold); letter-spacing: 3px; text-transform: uppercase;
+  font-size: 11px; font-weight: 800; margin: 12px 0 6px;
+}
+.garagePanel .closeSet { margin-top: 16px; background: var(--vc-green); }
+.garagePanel .closeSet:hover { background: var(--vc-green-dk); }
+
+/* ---- in-race touches: gold + serif venue label ---- */
+#trackLabel { font-family: Georgia, serif; letter-spacing: 4px; color: #e8d9ae; }
+#bestLap { color: var(--vc-gold); }
+#leaderboard .lbRow.me { background: rgba(30,87,65,.72); }
+
+/* ================================================================
+   MOBILE — touch controls + responsive poster. Thumb-zone layout:
+   wheel bottom-left, pedals bottom-right, 44px+ targets, safe areas.
+   ================================================================ */
+
+/* ---- touch driving controls (built by js/touch.js) ---- */
+#touchUI { position: fixed; inset: 0; z-index: 40; pointer-events: none; touch-action: none;
+  -webkit-user-select: none; user-select: none; }
+#touchUI > * { pointer-events: auto; }
+
+#tWheelWrap {
+  position: fixed; left: calc(10px + env(safe-area-inset-left));
+  bottom: calc(10px + env(safe-area-inset-bottom));
+}
+#tWheel {
+  width: 116px; height: 116px; border-radius: 50%;
+  border: 5px solid rgba(244,236,221,.55);
+  background: radial-gradient(circle, rgba(10,14,12,.12) 40%, rgba(10,14,12,.34) 100%);
+  box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  position: relative; touch-action: none;
+}
+#tWheel .tSpoke { position: absolute; left: 50%; top: 50%; width: 92px; height: 6px;
+  margin: -3px 0 0 -46px; background: rgba(244,236,221,.4); border-radius: 3px; }
+#tWheel .tSpoke.s2 { transform: none; height: 40px; width: 6px; margin: 0 0 0 -3px; top: auto; bottom: 4px; }
+#tWheel .tHub { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px;
+  border-radius: 50%; background: rgba(199,58,44,.85); }
+#tWheel .tTop { position: absolute; left: 50%; top: 2px; width: 6px; height: 12px; margin-left: -3px;
+  border-radius: 3px; background: var(--vc-gold); }
+#touchUI.tiltMode #tWheelWrap { opacity: .2; }
+
+/* pedals: slim strips pinned to the right edge, Asphalt-style */
+#tPedals {
+  position: fixed; right: calc(8px + env(safe-area-inset-right));
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  display: flex; gap: 8px; align-items: flex-end;
+}
+#tPedals .tCol { display: flex; flex-direction: column; gap: 8px; }
+.tPedal {
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 9px;
+  font-weight: 800; letter-spacing: 2px; font-size: 9px; color: rgba(244,236,221,.7);
+  border-radius: 12px; touch-action: none;
+  background: rgba(16,24,19,.30); border: 1px solid rgba(244,236,221,.30);
+  backdrop-filter: blur(2px); text-shadow: 0 1px 2px rgba(0,0,0,.7);
+}
+#tGas { width: 60px; height: min(280px, 42vh); }
+#tBrake { width: 60px; height: min(170px, 26vh); background: rgba(150,40,30,.26); }
+#tHandbrake { width: 60px; height: 48px; background: rgba(201,154,46,.22); }
+.tPedal.held { background: rgba(244,236,221,.22); border-color: var(--vc-gold); color: #f8f4e8; }
+
+#tMini {
+  position: fixed; top: calc(56px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left));
+  display: flex; flex-direction: column; gap: 8px;
+}
+#tMini button {
+  width: 38px; height: 38px; border-radius: 50%; font-size: 16px; padding: 0; line-height: 1;
+  background: rgba(10,14,12,.38); border: 1px solid rgba(244,236,221,.3);
+  backdrop-filter: blur(2px); opacity: .85;
+}
+#tMini button.on { background: var(--vc-green); border-color: var(--vc-gold); opacity: 1; }
+
+/* ---- responsive HUD: everything pinned to an edge in a slim glass chip ---- */
+@media (max-width: 860px) {
+  #hudTop { padding: 6px 8px; align-items: flex-start; }
+  #posBox, #timeBox {
+    background: rgba(8,12,10,.55); border: 1px solid rgba(244,236,221,.16);
+    border-radius: 8px; padding: 5px 10px 4px; backdrop-filter: blur(4px);
+  }
+  #position { font-size: 16px; letter-spacing: .5px; text-shadow: none; }
+  #lapCount { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; opacity: .7; margin-top: 1px; text-shadow: none; }
+  #trackLabel { font-size: 9px; letter-spacing: 3px; margin-top: 8px; opacity: .75; max-width: 36vw;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #curLap.big { font-size: 16px; letter-spacing: 0; text-shadow: none; }
+  #lastLap, #bestLap { font-size: 9px; letter-spacing: .5px; opacity: .75; text-shadow: none; }
+  #speedBox {
+    bottom: calc(8px + env(safe-area-inset-bottom)); right: 50%; transform: translateX(50%);
+    text-align: center; background: rgba(8,12,10,.45); border: 1px solid rgba(244,236,221,.14);
+    border-radius: 10px; padding: 4px 14px 6px; backdrop-filter: blur(3px); text-shadow: none;
+  }
+  #speed { font-size: 34px; font-weight: 800; -webkit-text-stroke: 0; line-height: 1; }
+  .unit { font-size: 10px; letter-spacing: 1px; opacity: .6; margin-left: 2px; }
+  #minimap { display: none !important; }  /* the wheel lives there now (JS sets inline display) */
+  #leaderboard { top: 52px; right: 6px; width: 118px; gap: 2px; overflow: hidden;
+    max-height: calc(100vh - 258px);     /* stops above the pedal stack */
+    -webkit-mask-image: linear-gradient(#000 78%, transparent);
+    mask-image: linear-gradient(#000 78%, transparent); }
+  #leaderboard .lbRow { font-size: 9.5px; padding: 2px 6px; gap: 5px; border-radius: 4px;
+    background: rgba(8,12,10,.5); text-shadow: none; font-weight: 700; }
+  #leaderboard .pos { width: 13px; }
+  #leaderboard .sw { width: 7px; height: 7px; border-radius: 2px; }
+  #countdown { font-size: 88px !important; }
+  #hint { display: none; }
+  #toast { font-size: 12px !important; }
+}
+@media (pointer: coarse) { #hint { display: none; } }
+
+/* ---- responsive poster menu ---- */
+@media (max-width: 700px) {
+  #menu h1 { font-size: 38px; letter-spacing: 8px; text-indent: 8px; }
+  #menu .tagline { font-size: 12px; letter-spacing: 4px; text-indent: 4px; }
+  #menu .subline { font-size: 12px; margin-bottom: 12px; }
+  .menuInner { padding: 74px 14px 28px; }
+  .crest svg { width: 54px; height: 54px; }
+  #diffRow { gap: 8px; }
+  #menu .navBtn { font-size: 13px; padding: 11px 12px; }
+  #menu .sectionHead { margin: 16px 0 2px; }
+  #trackGrid { grid-template-columns: 1fr; gap: 14px; }
+  .cardBtns button { min-height: 46px; }
+  #menu .footer { display: none; }
+  #acctChip { top: calc(12px + env(safe-area-inset-top)); left: 10px; right: 10px; justify-content: space-between; padding: 6px 6px 6px 12px; }
+  #acctChip .acctText { font-size: 12px; }
+  #accountScreen h1 { font-size: 40px; letter-spacing: 8px; text-indent: 8px; }
+  .garagePanel { width: 96vw; padding: 16px 12px; }
+  .panel { width: 94vw; max-height: 88vh; overflow-y: auto; }
+  .settingsPanel { max-height: 88vh; }
+}
+
+/* ================================================================
+   TRUE-APP PASS — portrait-first, installable, Smashkart up front.
+   ================================================================ */
+
+/* app feel: no tap flashes, no rubber-banding, instant taps */
+* { -webkit-tap-highlight-color: transparent; }
+html, body { overscroll-behavior: none; }
+button { touch-action: manipulation; }
+
+/* hero: one tap into the main mode */
+#quickRace {
+  display: block; width: min(420px, 100%); margin: 4px auto 2px;
+  padding: 16px 18px 13px; border-radius: 14px;
+  background: linear-gradient(180deg, #236349 0%, var(--vc-green-dk) 100%);
+  color: var(--vc-paper); font-size: 19px; font-weight: 900; letter-spacing: 3px;
+  border: 1px solid rgba(20,61,46,.6); border-bottom: 4px solid #0e2c21;
+  box-shadow: 0 6px 18px rgba(20,61,46,.35);
+}
+#quickRace span {
+  display: block; margin-top: 3px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 2px; color: var(--vc-gold); text-transform: uppercase;
+}
+#quickRace:active { transform: translateY(2px); border-bottom-width: 2px; }
+
+/* landscape lock: touch devices held upright get the rotate card */
+#rotateOverlay {
+  display: none; position: fixed; inset: 0; z-index: 95;
+  align-items: center; justify-content: center; text-align: center;
+  background:
+    repeating-linear-gradient(45deg, rgba(30,87,65,.035) 0 14px, transparent 14px 28px),
+    var(--vc-paper);
+  color: var(--vc-green-dk);
+}
+/* The rotate card is now a fallback only — touch.js force-rotates the page instead.
+   body.rot90: the whole app drawn 90° clockwise on a portrait screen, so the game
+   is ALWAYS landscape no matter how the phone is held. Fixed children anchor to the
+   transformed body, so every HUD element lands on the correct (rotated) edge. */
+body.rot90 {
+  position: fixed; top: 0; left: 0;
+  width: 100vh; height: 100vw;
+  width: 100dvh; height: 100dvw;
+  transform-origin: top left;
+  transform: rotate(90deg) translate(0, -100%);
+  overflow: hidden;
+}
+.rotatePhone { font-size: 54px; animation: rotHint 1.6s ease-in-out infinite; display: inline-block; }
+@keyframes rotHint { 0%,25%{transform:rotate(0)} 60%,100%{transform:rotate(90deg)} }
+#rotateOverlay p { font-weight: 900; letter-spacing: 4px; margin-top: 12px; font-size: 15px; }
+#rotateOverlay span { font-size: 12px; opacity: .6; }
+
+/* portrait cockpit: shorter pedal strips, everything reachable one-handed */
+@media (orientation: portrait) and (max-width: 700px) {
+  #tGas { height: min(200px, 26vh); }
+  #tBrake { height: min(120px, 16vh); }
+  #tWheel { width: 108px; height: 108px; }
+  #tMini { top: auto; bottom: calc(150px + env(safe-area-inset-bottom)); left: calc(8px + env(safe-area-inset-left)); }
+  #speedBox { bottom: calc(6px + env(safe-area-inset-bottom)); }
+  #leaderboard { max-height: 150px; }   /* top of the field + fade; full order lives in results */
+  #menu h1 { font-size: 34px; }
+  #quickRace { font-size: 17px; }
+}
+
+/* ================================================================
+   V5 — RESEARCH-BACKED DESIGN SYSTEM. One ink (#2b2119, never #000),
+   chunky 3-layer buttons with strict color roles, slab display type,
+   paper grain, and the "Karting" cockpit: steer zones + auto-gas.
+   ================================================================ */
+@font-face {
+  font-family: 'Alfa Slab One';
+  src: url('fonts/alfa-slab-one.woff2') format('woff2');
+  font-display: swap;
+}
+:root { --vc-ink: #2b2119; }
+
+/* ---- the button recipe: face + solid edge + springy transform press ---- */
+#menu .navBtn, #quickRace, #menu .cardBtns button, .garagePanel .closeSet {
+  font-family: 'Alfa Slab One', Georgia, serif;
+  font-weight: 400; text-transform: uppercase; letter-spacing: .05em;
+  border: 2.5px solid var(--vc-ink); border-radius: 14px;
+  transition: transform .25s cubic-bezier(0.3,0.7,0.4,1.4), box-shadow .25s cubic-bezier(0.3,0.7,0.4,1.4);
+}
+#menu .navBtn:active, #quickRace:active, #menu .cardBtns button:active, .garagePanel .closeSet:active {
+  transform: translateY(5px); transition-duration: .04s;
+}
+/* secondary: green face */
+#menu .navBtn, #menu .cardBtns button {
+  background: var(--vc-green); color: var(--vc-paper);
+  box-shadow: 0 6px 0 #11362a; font-size: 13px; padding: 12px 16px 10px;
+  text-shadow: 0 1.5px 0 rgba(43,33,25,.35);
+}
+#menu .navBtn:hover, #menu .cardBtns button:hover { background: #236349; color: var(--vc-paper); }
+#menu .navBtn:active, #menu .cardBtns button:active { box-shadow: 0 1px 0 #11362a; }
+/* hero: rosso belongs to RACE alone */
+#quickRace {
+  background: var(--vc-red); color: var(--vc-paper);
+  border-bottom-width: 2.5px; box-shadow: 0 7px 0 #8f2418, 0 12px 16px rgba(43,33,25,.18);
+  font-size: 22px; letter-spacing: .06em; padding: 18px 18px 14px;
+  animation: heroGlow 2.5s ease-in-out infinite;
+}
+#quickRace:hover { background: #d4452f; }
+#quickRace:active { box-shadow: 0 1px 0 #8f2418; animation: none; }
+#quickRace span { font-family: Georgia, serif; text-transform: none; letter-spacing: 2px; }
+@keyframes heroGlow {
+  0%, 100% { outline: 0 solid rgba(201,154,46,0); }
+  50% { outline: 4px solid rgba(201,154,46,.45); }
+}
+#menu #hardBtn.hard { background: var(--vc-ink); border-color: var(--vc-ink); color: var(--vc-paper); box-shadow: 0 6px 0 #120d09; }
+
+/* venue cards: litho prints — ink outline, gold pinstripe, hard ink shadow */
+#menu .card {
+  border: 2.5px solid var(--vc-ink); border-radius: 14px;
+  box-shadow: inset 0 0 0 1.5px var(--vc-gold), 0 4px 0 rgba(43,33,25,.25);
+}
+#menu .card:hover { border-color: var(--vc-ink); box-shadow: inset 0 0 0 1.5px var(--vc-gold), 0 6px 0 rgba(43,33,25,.3); transform: translateY(-2px); }
+#menu .cardMode { transform: rotate(-2deg); letter-spacing: 2px; border: 1.5px solid var(--vc-ink); border-radius: 5px; }
+#menu .card:nth-child(even) .cardMode { transform: rotate(2deg); }
+#menu .sectionHead, .garagePanel h2 { font-family: 'Alfa Slab One', Georgia, serif; font-weight: 400; }
+
+/* paper grain: one global overlay on the poster screens */
+#menu::after, #accountScreen::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+/* ---- the Karting cockpit ---- */
+#tSteer {
+  position: fixed; left: 0; bottom: 0;
+  width: 46vw; height: 52vh; max-width: 420px;
+}
+.tZone {
+  position: absolute; bottom: 0; width: 50%; height: 100%;
+  display: flex; align-items: flex-end; justify-content: center;
+  touch-action: none; padding-bottom: 34px;
+}
+#tZoneL { left: 0; } #tZoneR { right: 0; }
+.tZone span {
+  font-size: 44px; line-height: 1; color: rgba(244,236,221,.4);
+  font-family: Georgia, serif; text-shadow: 0 1px 3px rgba(43,33,25,.5);
+  transition: transform .08s;
+}
+.tZone.held span { color: rgba(244,236,221,1); transform: scale(1.25); }
+#tWheelWrap {
+  position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%); pointer-events: none;
+}
+#tWheel {
+  width: 96px; height: 96px; border: none; background: none; box-shadow: none;
+  opacity: .5; transition: opacity .15s;
+}
+#tSteer:has(.held) #tWheel, #touchUI[data-steer="tilt"] #tWheel { opacity: .9; }
+
+#tRight {
+  position: fixed; right: calc(10px + env(safe-area-inset-right));
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.tBtn {
+  display: flex; align-items: center; justify-content: center; touch-action: none;
+  font-family: 'Alfa Slab One', Georgia, serif; letter-spacing: .06em;
+  color: rgba(244,236,221,.65); font-size: 13px;
+  width: 96px; height: 96px; border-radius: 50%;
+  border: 2.5px solid rgba(244,236,221,.4); background: rgba(16,24,19,.25);
+  text-shadow: 0 1px 2px rgba(43,33,25,.7); opacity: .8;
+}
+.tBtn.tSmall { width: 58px; height: 58px; font-size: 9px; align-self: flex-start; margin-right: 12px; }
+.tBtn.held {
+  background: rgba(199,58,44,.85); border-color: #f4ecdd; color: #f8f4e8;
+  transform: scale(1.08); opacity: 1;
+}
+#tBrakeSm.held { background: rgba(30,87,65,.9); }
+
+/* visibility, two independent axes: the steering pick controls the zones, the throttle
+   pick swaps the right-thumb cluster (auto/lean) for the full pedal strips (pedals) */
+#touchUI[data-accel="pedals"] #tRight { display: none; }
+#touchUI:not([data-accel="pedals"]) #tPedals { display: none; }
+#touchUI[data-steer="tilt"] .tZone { display: none; }
+
+/* ---- no browser gestures in the game (v8.1): double-tap zoom, text selection, long-press
+   callouts all get in the way of racing. Inputs keep selectable text for typing names. ---- */
+html, body { touch-action: manipulation; }
+* { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea { -webkit-user-select: text; user-select: text; }
+
+/* ---- v8.2 Halves steering: the whole screen is the wheel ---- */
+#touchUI[data-steer="halves"] #tSteer { left: 0; right: 0; top: 0; bottom: 0; width: auto; height: auto; max-width: none; }
+#touchUI[data-steer="halves"] .tZone { padding-bottom: 38vh; }   /* arrows float mid-screen */
+#touchUI[data-steer="halves"] .tZone span { color: rgba(244,236,221,.22); }
+#touchUI[data-steer="halves"] #tWheel { opacity: .9; }
+
+/* ---- Smashkart item box: round, top middle, poster-styled (v8.1) ---- */
+#itemBox {
+  position: absolute; left: 50%; top: 48px; transform: translateX(-50%) scale(0);
+  width: 58px; height: 58px; border-radius: 50%;
+  background: #f4ecdd; border: 3px solid #1e5741;
+  box-shadow: 0 3px 0 rgba(43,33,25,.35);
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .18s cubic-bezier(0.3,0.7,0.4,1.4);
+  pointer-events: none; z-index: 6;
+}
+#itemBox.on { transform: translateX(-50%) scale(1); }
+#itemBox svg { width: 36px; height: 36px; display: block; }
+.cardIcon { width: 26px; height: 38px; background: #fdfaf1; border: 1.5px solid #d8cfb8;
+  border-radius: 3px; position: relative; color: #c73a2c; font-family: Georgia, serif; }
+.cardIcon .cj { position: absolute; top: -1px; left: 4px; font-size: 13px; font-weight: bold; }
+.cardIcon .ch { position: absolute; bottom: 0px; right: 4px; font-size: 15px; }
+@media (max-width: 860px) {
+  #itemBox { width: 46px; height: 46px; top: 40px; border-width: 2.5px; }
+  #itemBox svg { width: 28px; height: 28px; }
+  .cardIcon { width: 21px; height: 31px; }
+  .cardIcon .cj { font-size: 11px; }
+  .cardIcon .ch { font-size: 12px; }
+}
+
+
+
+/* ---- Parts Shop + PartsPacks (Garage Update economy) ---- */
+#shopModal { position: fixed; inset: 0; background: rgba(30,25,18,.72); display: none;
+  align-items: center; justify-content: center; z-index: 40; }
+.shopPanel { max-height: 88vh; overflow-y: auto; width: min(680px, 94vw); }
+.corsas { color: #c99a2e; font-size: 18px; }
+#sponsorRow { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 8px 0 14px; }
+.sponsorCard { display: flex; flex-direction: column; gap: 2px; padding: 10px 14px;
+  background: #f4ecdd; color: #2b2119; border: 2px solid #1e5741; border-radius: 8px;
+  box-shadow: 0 4px 0 #1e5741; cursor: pointer; font-family: inherit; min-width: 130px; }
+.sponsorCard:active { transform: translateY(3px); box-shadow: 0 1px 0 #1e5741; }
+.sponsorCard b { font-size: 14px; } .sponsorCard span { font-size: 10px; opacity: .7; }
+.sponsorCard em { font-style: normal; color: #c73a2c; font-weight: bold; }
+#famRow { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+#famRow button { font-size: 11px; padding: 4px 9px; }
+#famRow button.sel { background: #1e5741; color: #f4ecdd; }
+#partSearch { width: 100%; padding: 7px 10px; margin-bottom: 8px; border: 2px solid #1e5741;
+  border-radius: 6px; background: #fdfaf1; font-family: inherit; }
+#storeList { max-height: 300px; overflow-y: auto; border: 1.5px solid #d8cfb8; border-radius: 8px; }
+.partRow { display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+  border-bottom: 1px solid #e8e0cc; }
+.partRow small { display: block; opacity: .65; font-size: 10px; }
+.partRow b { font-size: 12.5px; }
+.partInfo { flex: 1; min-width: 0; }
+.rarDot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.buyBtn { font-size: 11px; padding: 4px 10px; white-space: nowrap; }
+.ownedN { font-size: 11px; color: #1e5741; font-weight: bold; }
+.cardNeed { font-size: 10px; color: #c99a2e; white-space: nowrap; }
+#invList { display: flex; flex-wrap: wrap; gap: 6px; }
+.invChip { font-size: 10.5px; border: 1.5px solid #8a8577; border-radius: 20px; padding: 3px 9px; background: #fdfaf1; }
+.cardChip { border-color: #c99a2e; }
+#packReveal { position: fixed; inset: 0; background: rgba(20,16,10,.88); z-index: 60;
+  display: flex; align-items: center; justify-content: center; }
+.packWrap { text-align: center; }
+.packArt { width: 170px; height: 230px; margin: 0 auto 18px; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(160deg, #1e5741, #143c2d 55%, #c99a2e22);
+  border: 3px solid #c99a2e; color: #f4ecdd; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-weight: bold; font-size: 17px;
+  box-shadow: 0 0 40px rgba(201,154,46,.35); transition: transform .15s; }
+.packArt span { font-size: 10px; letter-spacing: 3px; opacity: .7; margin-top: 6px; }
+.packArt:hover { transform: scale(1.04) rotate(-1deg); }
+.packArt.torn { animation: packtear .4s forwards; }
+@keyframes packtear { 60% { transform: scale(1.15) rotate(-5deg); filter: brightness(1.8); }
+  100% { transform: scale(1.5) rotate(4deg); opacity: 0; } }
+.pullRow { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; max-width: 620px; margin-bottom: 16px; }
+.pullCard { width: 108px; min-height: 120px; background: #f4ecdd; border-radius: 8px; padding: 10px 6px;
+  display: flex; flex-direction: column; gap: 4px; align-items: center; justify-content: center;
+  border: 2.5px solid #2b2119; animation: pullpop .3s cubic-bezier(.3,.7,.4,1.4); }
+.pullCard b { font-size: 11.5px; color: #2b2119; } .pullCard small { font-size: 9px; letter-spacing: 1px; }
+.pullCard i { font-size: 30px; font-style: normal; }
+.pullCard.rar-solid { border-color: #1e5741; }
+.pullCard.rar-rare { border-color: #c99a2e; box-shadow: 0 0 18px rgba(201,154,46,.6); }
+.pullCard.rar-legendary { border-color: #c73a2c; box-shadow: 0 0 26px rgba(199,58,44,.7); }
+.pullCard.isCard { background: #fdfaf1; border-style: dashed; }
+@keyframes pullpop { 0% { transform: scale(0) rotate(-8deg); } 100% { transform: scale(1); } }
+#packDone { margin-top: 4px; }
+body.shake { animation: bodyshake .35s; }
+@keyframes bodyshake { 25% { transform: translate(-7px,4px); } 50% { transform: translate(6px,-5px); }
+  75% { transform: translate(-4px,3px); } }
+.payout { color: #c99a2e; font-weight: bold; margin: 8px 0; }
+
+/* ---- Simpleton Garage loadout ---- */
+.loRow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 5px 0; }
+.loFam { font-size: 11px; font-weight: bold; width: 62px; color: #1e5741; }
+.loChip { font-size: 10.5px; padding: 3px 9px; border: 1.5px solid #8a8577; border-radius: 14px;
+  background: #fdfaf1; cursor: pointer; font-family: inherit; }
+.loChip.sel { background: #1e5741; color: #f4ecdd; border-color: #1e5741 !important; }
+.loBar { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+.loBar span { font-size: 10px; width: 62px; text-align: right; opacity: .7; }
+.loBar div { flex: 1; height: 8px; background: #e8e0cc; border-radius: 4px; overflow: hidden; }
+.loBar i { display: block; height: 100%; background: #c99a2e; border-radius: 4px; }
+
+/* ---- Full-screen Garage: doors, livery rack, builder ---- */
+#garageModal .garagePanel { width: 100vw; height: 100vh; max-width: none; max-height: none;
+  border-radius: 0; overflow-y: auto; box-sizing: border-box; padding: 18px clamp(12px, 4vw, 48px); }
+#doorRow { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 14px 0 20px; }
+.gDoor { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;
+  width: min(300px, 44vw); padding: 22px 16px; font-family: inherit;
+  background: #f4ecdd; color: #2b2119; border: 3px solid #1e5741; border-radius: 12px;
+  box-shadow: 0 6px 0 #1e5741; transition: transform .12s; }
+.gDoor:hover { transform: translateY(-3px); }
+.gDoor:active { transform: translateY(3px); box-shadow: 0 2px 0 #1e5741; }
+.gDoor i { font-size: 40px; font-style: normal; }
+.gDoor b { letter-spacing: 1px; }
+.gDoor span { font-size: 11px; opacity: .7; line-height: 1.4; }
+.gDoor.locked { filter: saturate(.6); border-style: dashed; }
+.gDoor.locked em { font-style: normal; font-size: 11px; color: #c73a2c; font-weight: bold; }
+#liveryRack { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+.bayCard { position: relative; width: 190px; background: #fdfaf1; border: 2px solid #2b2119;
+  border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px;
+  align-items: center; text-align: center; }
+.bayCard.active { border-color: #1e5741; box-shadow: 0 0 0 3px rgba(30,87,65,.25); }
+.bayCard b { font-size: 13px; } .bayCard small { font-size: 10px; opacity: .6; }
+.bayPaint { width: 34px; height: 14px; border-radius: 4px; border: 1.5px solid #2b2119; }
+.bayBtns { display: flex; gap: 4px; margin-top: 6px; }
+.bayBtns button { font-size: 10px; padding: 4px 7px; }
+.newBay { justify-content: center; cursor: pointer; border-style: dashed; background: transparent;
+  font-family: inherit; color: #1e5741; min-height: 110px; }
+.newBay i { font-size: 26px; font-style: normal; }
+#gBuildHead { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+#gBuildHead h2 { margin: 0; flex: 1; }
+#kartName { padding: 8px 12px; border: 2px solid #1e5741; border-radius: 8px; background: #fdfaf1;
+  font-family: inherit; font-size: 14px; width: min(240px, 40vw); }
+#gSave { background: #c73a2c; color: #f4ecdd; font-weight: bold; }
+#gBuildBody { display: flex; gap: 18px; flex-wrap: wrap; }
+#gLeft { flex: 0 1 340px; min-width: 260px; }
+#gRight { flex: 1 1 380px; min-width: 300px; }
+.loChip.dead { opacity: .45; cursor: not-allowed; }
+@media (max-width: 700px) { .gDoor { width: 90vw; } }
+
+/* ---- ROAR sound settings ---- */
+.volRow { display: flex; align-items: center; gap: 12px; margin: 6px 0; }
+.volRow span { width: 64px; font-size: 13px; opacity: .85; text-align: right; }
+/* touch-action none: the global gesture-kill (touch-action: manipulation) eats slider
+   thumb drags on phones — range inputs need the raw touchmove to work at all */
+.volRow input[type="range"] { flex: 1; touch-action: none; height: 34px; accent-color: #1e5741; }
+
+/* garage doors: out-rank the .panel button system; cream cards on the night workshop */
+.garagePanel button.gDoor { background: #f4ecdd; color: #2b2119; border: 3px solid #c99a2e;
+  box-shadow: 0 6px 0 #14201a; text-shadow: none; }
+.garagePanel button.gDoor b { color: #1e5741; letter-spacing: 1.5px; }
+.garagePanel button.gDoor span { color: #4a4237; }
+.garagePanel button.gDoor.locked { background: #d9d2c0; border-style: dashed; }
+.garagePanel button.gDoor.locked em { color: #c73a2c; }
+.garagePanel button.newBay { background: rgba(244,236,221,.06); color: #f4ecdd;
+  border: 2px dashed #c99a2e; box-shadow: none; text-shadow: none; }
+.garagePanel button.newBay b { color: #c99a2e; }
+.garagePanel .bayCard { background: #fdfaf1; color: #2b2119; }
+.garagePanel .bayBtns button { text-shadow: none; }
+.garagePanel #gSave { background: #c73a2c; color: #f4ecdd; }
+
+/* ---- the snap wheel (Mario Kart-style picker, Simpleton Garage) ---- */
+#gBuildBody { align-items: flex-start; }
+#wheelCol { flex: 0 1 320px; min-width: 270px; }
+#catHead { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 4px; }
+#catHead b { font-size: 17px; letter-spacing: 2px; color: #c99a2e; min-width: 110px; text-align: center; }
+#catHead button { font-size: 15px; padding: 5px 12px; }
+#catDots { display: flex; gap: 6px; justify-content: center; margin-bottom: 8px; }
+#catDots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(244,236,221,.25); }
+#catDots i.on { background: #c99a2e; }
+#snapWheelWrap { position: relative; touch-action: pan-y; }
+#snapWheelWrap::before { content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: 88px; transform: translateY(-50%); border-top: 2px solid #c99a2e;
+  border-bottom: 2px solid #c99a2e; pointer-events: none; z-index: 2;
+  background: rgba(201,154,46,.07); }
+#snapWheelWrap::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  background: linear-gradient(#131b16 0%, transparent 26%, transparent 74%, #131b16 100%); }
+#snapWheel { height: 340px; overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none; }
+#snapWheel::-webkit-scrollbar { display: none; }
+.wPad { height: 128px; }
+.wCard { height: 76px; margin: 4px 10px; box-sizing: border-box; scroll-snap-align: center;
+  background: #f4ecdd; border: 2.5px solid #8a8577; border-radius: 10px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  opacity: .55; transition: opacity .15s, transform .15s; }
+.wCard b { color: #2b2119; font-size: 14px; }
+.wCard small { color: #6a6152; font-size: 10.5px; }
+.wCard.centered { opacity: 1; transform: scale(1.03); box-shadow: 0 3px 0 rgba(0,0,0,.25); }
+.wSwatch { width: 64px; height: 34px; border-radius: 8px; border: 2px solid #2b2119; }
+#wheelHint { text-align: center; font-size: 10.5px; color: rgba(244,236,221,.45); margin-top: 6px; }
+
+/* wheel polish: compact category arrows, contained preview */
+.garagePanel #catHead button { flex: 0 0 auto; width: 44px; min-width: 0; padding: 6px 0;
+  background: #1e5741; color: #f4ecdd; border: 2px solid #c99a2e; border-radius: 8px;
+  box-shadow: 0 3px 0 #14201a; text-shadow: none; font-size: 14px; }
+.garagePanel #gRight { display: flex; flex-direction: column; }
+.garagePanel #kitPreview { width: 100%; max-height: 360px; border-radius: 12px; }
+.garagePanel #loadoutBars { margin-top: 10px; max-width: 520px; }
+.garagePanel #loadoutBars .loBar span { color: rgba(244,236,221,.75); }
+.garagePanel #loadoutBars .loBar div { background: rgba(244,236,221,.15); }
+
+
+/* ═══ V13 STORM CENTER — Rust-eze Racing Center × Jackson Storm (locked 2026-08-07)
+   Dark-day cobalt sky, matte dark-glass panels, ELECTRIC BLUE glow structure,
+   orange as the single warm hero. Sharp. No emojis. No tilt. The groove stays. ═══ */
+@font-face { font-family: 'Archivo Black'; src: url('fonts/archivo-black.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Poppins'; src: url('fonts/poppins.woff2') format('woff2');
+  font-weight: 600 800; font-display: swap; }
+
+:root {
+  --st-sky0: #0a1128; --st-sky1: #12225c; --st-sky2: #1d3f9e;
+  --st-glass: rgba(8, 14, 30, .82); --st-glass2: rgba(12, 20, 44, .9);
+  --st-blue: #2e6bff; --st-blue-hot: #4d86ff; --st-glow: rgba(46, 107, 255, .55);
+  --st-orange: #ff8c1a; --st-orange-hot: #ffa53d; --st-oglow: rgba(255, 140, 26, .5);
+  --st-text: #eef3ff; --st-dim: #8fa8e8;
+}
+
+#menu, #accountScreen {
+  background: linear-gradient(180deg, var(--st-sky0) 0%, var(--st-sky1) 52%, var(--st-sky2) 100%);
+  font-family: 'Poppins', sans-serif;
+}
+#menu::before, #accountScreen::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 70'><ellipse cx='70' cy='46' rx='58' ry='17' fill='white'/><ellipse cx='128' cy='36' rx='48' ry='19' fill='white'/><ellipse cx='170' cy='48' rx='44' ry='13' fill='white'/></svg>"),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 220 70'><ellipse cx='70' cy='46' rx='58' ry='17' fill='white'/><ellipse cx='128' cy='36' rx='48' ry='19' fill='white'/><ellipse cx='170' cy='48' rx='44' ry='13' fill='white'/></svg>");
+  background-repeat: no-repeat, no-repeat;
+  background-size: 340px 108px, 200px 64px;
+  background-position: -340px 9%, 110vw 24%;
+  animation: cloudDrift 88s linear infinite;
+  opacity: .1;
+}
+@keyframes cloudDrift {
+  0%   { background-position: -340px 9%, 110vw 24%; }
+  100% { background-position: 110vw 9%, -220px 24%; }
+}
+#menu .menuInner, #accountScreen .menuInner { position: relative; z-index: 1; }
+
+/* national checker rails, always crawling */
+#menu .flagStripe {
+  background: repeating-linear-gradient(90deg, #1c3ab5 0 26px, #b86412 26px 52px);
+  height: 8px;
+  animation: checkerGroove 24s linear infinite;
+}
+@keyframes checkerGroove { to { background-position: 104px 0; } }
+
+/* the flag, mounted like facility signage */
+#menu .crest svg { display: none; }
+#menu .crest::before {
+  content: ''; display: block; width: 72px; height: 48px; margin: 0 auto;
+  border-radius: 5px; border: 2px solid var(--st-blue);
+  box-shadow: 0 0 14px var(--st-glow), 0 0 34px rgba(46,107,255,.25);
+  background: conic-gradient(#2e6bff 0 90deg, #ff8c1a 90deg 180deg,
+                             #2e6bff 180deg 270deg, #ff8c1a 270deg 360deg);
+}
+#menu h1, #menu h1 span, #accountScreen h1, #accountScreen h1 span {
+  font-family: 'Archivo Black', sans-serif; color: var(--st-text); letter-spacing: 3px;
+  text-shadow: 0 0 18px var(--st-glow), 0 0 44px rgba(46,107,255,.35), 0 3px 0 rgba(4,8,20,.8);
+}
+#menu .tagline, #accountScreen .tagline { color: var(--st-blue-hot); font-weight: 700; letter-spacing: 5px; }
+#menu .subline { color: var(--st-dim); font-style: normal; }
+#menu .sectionHead { color: var(--st-dim); letter-spacing: 5px; }
+
+/* dark-glass buttons with the blue edge-light */
+#menu .navBtn {
+  font-family: 'Archivo Black', sans-serif; font-size: 12.5px; letter-spacing: 1.5px;
+  color: var(--st-text); background: var(--st-glass);
+  border: 1.5px solid var(--st-blue); border-radius: 5px; padding: 12px 18px;
+  box-shadow: 0 0 10px rgba(46,107,255,.28), inset 0 0 14px rgba(46,107,255,.08);
+  transition: box-shadow .15s, transform .1s, background .15s;
+}
+#menu .navBtn:hover { box-shadow: 0 0 18px var(--st-glow), inset 0 0 18px rgba(46,107,255,.14); }
+#menu .navBtn:active { transform: translateY(2px); }
+#menu .navBtn b { color: var(--st-orange-hot) !important; }
+
+/* the ONE warm thing: the hero */
+#menu #quickRace {
+  font-family: 'Archivo Black', sans-serif; letter-spacing: 2px; color: #16090096;
+  color: #1d0e00; border: none; border-radius: 6px;
+  background: linear-gradient(180deg, var(--st-orange-hot), var(--st-orange));
+  box-shadow: 0 0 22px var(--st-oglow), 0 0 54px rgba(255,140,26,.25), 0 4px 0 #b35c00;
+  animation: heroBreathe 3.2s ease-in-out infinite;
+}
+#menu #quickRace span { color: #4a2500; }
+#menu #quickRace:active { transform: translateY(3px); box-shadow: 0 0 22px var(--st-oglow), 0 1px 0 #b35c00; }
+@keyframes heroBreathe {
+  0%, 100% { box-shadow: 0 0 18px var(--st-oglow), 0 0 44px rgba(255,140,26,.2), 0 4px 0 #b35c00; }
+  50% { box-shadow: 0 0 30px var(--st-oglow), 0 0 70px rgba(255,140,26,.34), 0 4px 0 #b35c00; }
+}
+
+/* venues page */
+#venuesMenu .vHead { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 14px; }
+#venuesMenu .vHead h2 {
+  font-family: 'Archivo Black', sans-serif; color: var(--st-text); letter-spacing: 4px; margin: 0;
+  text-shadow: 0 0 16px var(--st-glow);
+}
+#trackGrid > * {
+  background: var(--st-glass2); border: 1.5px solid rgba(46,107,255,.55); border-radius: 7px;
+  box-shadow: 0 0 12px rgba(46,107,255,.2);
+  color: var(--st-text);
+}
+#trackGrid > *:hover { box-shadow: 0 0 20px var(--st-glow); }
+#trackGrid button {
+  font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 1px;
+  color: var(--st-text); background: rgba(46,107,255,.16);
+  border: 1.5px solid var(--st-blue); border-radius: 4px;
+}
+#trackGrid button:active { transform: translateY(2px); }
+
+/* utility bar gone — pairing lives in Settings now */
+#acctChip { display: none !important; }
+
+#accountScreen .acctBox { background: var(--st-glass2); border: 1.5px solid var(--st-blue);
+  border-radius: 8px; box-shadow: 0 0 24px rgba(46,107,255,.25); }
+#accountScreen .acctBox input { background: #0a1128; color: var(--st-text); border: 1.5px solid rgba(46,107,255,.5); }
+#accountScreen .acctBox button {
+  font-family: 'Archivo Black', sans-serif; color: #1d0e00; border: none; border-radius: 6px;
+  background: linear-gradient(180deg, var(--st-orange-hot), var(--st-orange));
+  box-shadow: 0 0 18px var(--st-oglow), 0 3px 0 #b35c00;
+}
+#accountScreen .acctNote { color: var(--st-dim); }
+
+/* now playing — dark glass, live bars */
+#nowPlaying {
+  position: fixed; left: 14px; bottom: 14px; z-index: 20;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--st-glass); border: 1.5px solid var(--st-blue); border-radius: 5px;
+  padding: 7px 12px;
+  box-shadow: 0 0 12px rgba(46,107,255,.3);
+  font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 11px; color: var(--st-dim);
+}
+#nowPlaying .eq { display: flex; align-items: flex-end; gap: 2px; height: 13px; }
+#nowPlaying .eq i {
+  width: 3.5px; background: linear-gradient(180deg, var(--st-orange), var(--st-blue));
+  border-radius: 1.5px; animation: eqBounce 1s ease-in-out infinite;
+}
+#nowPlaying .eq i:nth-child(1) { height: 60%; }
+#nowPlaying .eq i:nth-child(2) { height: 100%; animation-delay: .18s; }
+#nowPlaying .eq i:nth-child(3) { height: 75%; animation-delay: .36s; }
+#nowPlaying .eq i:nth-child(4) { height: 45%; animation-delay: .5s; }
+@keyframes eqBounce { 0%, 100% { transform: scaleY(.4); } 50% { transform: scaleY(1); } }
+
+/* ═══ THE INTRO: four cars paint the flag ═══ */
+#introSplash {
+  position: fixed; inset: 0; z-index: 300; background: #060a16; overflow: hidden;
+  transition: opacity .45s;
+}
+#introSplash.out { opacity: 0; pointer-events: none; }
+#introSplash .smear {
+  position: absolute; width: 50.5%; height: 50.5%;
+}
+#introSplash .q1 { left: 0;   top: 0;   background: #ff8c1a; transform: translateX(-104%); box-shadow: 0 0 60px rgba(255,140,26,.5); }
+#introSplash .q2 { right: 0;  top: 0;   background: #2e6bff; transform: translateX(104%);  box-shadow: 0 0 60px rgba(46,107,255,.5); }
+#introSplash .q3 { left: 0;   bottom: 0; background: #2e6bff; transform: translateX(-104%); box-shadow: 0 0 60px rgba(46,107,255,.5); }
+#introSplash .q4 { right: 0;  bottom: 0; background: #ff8c1a; transform: translateX(104%);  box-shadow: 0 0 60px rgba(255,140,26,.5); }
+#introSplash .smear::after {
+  content: ''; position: absolute; top: 50%; width: 120px; height: 50px; margin-top: -25px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 50'><rect x='8' y='14' width='88' height='18' rx='9' fill='%23060a16'/><rect x='58' y='4' width='30' height='14' rx='7' fill='%23060a16'/><circle cx='32' cy='38' r='10' fill='%23060a16'/><circle cx='86' cy='38' r='10' fill='%23060a16'/></svg>") no-repeat center / contain;
+  opacity: 0; }
+#introSplash .q1::after, #introSplash .q3::after { right: -126px; }
+#introSplash .q2::after, #introSplash .q4::after { left: -126px; transform: scaleX(-1); }
+#introSplash.run .smear::after { opacity: 1; transition: opacity .1s 1.9s; opacity: 0; }
+#introSplash.run .q1 { animation: sweepIn .48s .20s cubic-bezier(.16,.84,.26,1) forwards; }
+#introSplash.run .q2 { animation: sweepIn .44s .62s cubic-bezier(.16,.84,.26,1) forwards; }
+#introSplash.run .q3 { animation: sweepIn .40s 1.00s cubic-bezier(.16,.84,.26,1) forwards; }
+#introSplash.run .q4 { animation: sweepIn .36s 1.34s cubic-bezier(.16,.84,.26,1) forwards; }
+@keyframes sweepIn { to { transform: translateX(0); } }
+#introSplash .introBrand {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px; opacity: 0;
+}
+#introSplash.run .introBrand { animation: brandDrop .5s 1.85s cubic-bezier(.2,.9,.3,1.2) forwards; }
+@keyframes brandDrop { from { opacity: 0; transform: scale(1.35); } to { opacity: 1; transform: scale(1); } }
+#introSplash .iFlag {
+  width: 84px; height: 56px; border-radius: 5px; border: 3px solid #fff;
+  background: conic-gradient(#2e6bff 0 90deg, #ff8c1a 90deg 180deg, #2e6bff 180deg 270deg, #ff8c1a 270deg 360deg);
+  box-shadow: 0 0 30px rgba(0,0,0,.4);
+}
+#introSplash h1 {
+  font-family: 'Archivo Black', sans-serif; font-size: 62px; margin: 0; color: #fff;
+  letter-spacing: 4px;
+  text-shadow: 0 4px 0 rgba(6,10,22,.55), 0 0 40px rgba(6,10,22,.5);
+}
+#introSplash p {
+  font-family: 'Poppins', sans-serif; font-weight: 700; letter-spacing: 6px;
+  color: #fff; opacity: .85; margin: 0; font-size: 13px;
+}
+@media (max-width: 700px) { #introSplash h1 { font-size: 40px; } }
+
+/* ═══ V14 STORM SHELL (2026-08-07) — the whole app speaks Storm Center.
+   Bottom icon tab bar, transitions on every state change, dark-glass +
+   electric-blue edge-light on ALL panels, ONE orange hero per screen.
+   Sharp radii (2-6px), tight hard glow, no emojis, no tilts. ═══ */
+
+/* ---- motion: pages rise in, modals scale in, closes fade out ---- */
+.pg.pgIn { animation: pgIn .22s cubic-bezier(.2,.8,.3,1); }
+@keyframes pgIn { from { opacity: 0; transform: translateY(14px); } }
+#menu { animation: bdIn .3s ease-out; }
+#results { animation: bdIn .25s ease-out; }
+#garageModal, #settingsModal, #pairModal, #shopModal, #pause { animation: bdIn .2s ease-out; }
+.panel { animation: panelIn .22s cubic-bezier(.2,.8,.3,1); }
+@keyframes bdIn { from { opacity: 0; } }
+@keyframes panelIn { from { opacity: 0; transform: scale(.965) translateY(8px); } }
+.vcOut { animation: bdOut .16s ease-in forwards !important; }
+.vcOut .panel { animation: panelOut .16s ease-in forwards; }
+@keyframes bdOut { to { opacity: 0; } }
+@keyframes panelOut { to { opacity: 0; transform: scale(.97) translateY(6px); } }
+
+/* ---- the paddock tab bar ---- */
+#tabBar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  display: none; justify-content: center; gap: clamp(2px, 2.4vw, 30px);
+  padding: 6px max(10px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-right));
+  background: rgba(5, 10, 22, .93);
+  border-top: 1.5px solid var(--st-blue);
+  box-shadow: 0 -1px 0 rgba(46,107,255,.3), 0 -8px 24px rgba(3,6,16,.55);
+  backdrop-filter: blur(10px);
+}
+body.tabsOn #tabBar { display: flex; animation: bdIn .25s; }
+#tabBar button {
+  flex: 0 1 96px; min-width: 60px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: none; border-radius: 4px; padding: 5px 4px 3px;
+  color: #7d92c9; transition: color .15s;
+}
+#tabBar button svg { width: 23px; height: 23px; fill: currentColor; display: block; transition: filter .15s; }
+#tabBar button span { font-family: 'Archivo Black', sans-serif; font-size: 8.5px; letter-spacing: 1.2px; }
+#tabBar button.on { color: var(--st-orange-hot); }
+#tabBar button.on svg { filter: drop-shadow(0 0 5px rgba(255,140,26,.85)); }
+#tabBar button:active { transform: translateY(1px); }
+/* content clears the bar */
+body.tabsOn #menu .menuInner { padding-bottom: 92px; }
+body.tabsOn .garagePanel { padding-bottom: 92px; }
+body.tabsOn #settingsModal { padding-bottom: 78px; }
+body.tabsOn #shopModal .shopPanel { max-height: calc(100dvh - 92px); margin-bottom: 66px; }
+@media (max-height: 520px) {
+  #tabBar { padding-top: 3px; gap: clamp(2px, 2vw, 18px); }
+  #tabBar button svg { width: 19px; height: 19px; }
+  #tabBar button span { font-size: 7.5px; }
+  body.tabsOn #menu .menuInner { padding-bottom: 72px; }
+}
+
+/* ---- panels: dark glass, blue edge-light, Poppins ---- */
+#pause, #results { background: rgba(4, 8, 20, .78); }
+#settingsModal, #pairModal { background: rgba(4, 8, 20, .8); }
+#garageModal { background: rgba(4, 8, 20, .85); }
+#shopModal { background: rgba(4, 8, 20, .8) !important; }
+.panel {
+  background: var(--st-glass2); border: 1.5px solid var(--st-blue); border-radius: 6px;
+  box-shadow: 0 0 16px rgba(46,107,255,.28), 0 18px 50px rgba(3,6,16,.55);
+  font-family: 'Poppins', sans-serif; color: var(--st-text);
+}
+.panel h2, #results h2 {
+  font-family: 'Archivo Black', sans-serif; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--st-text); text-shadow: 0 0 12px var(--st-glow);
+}
+.panel h3, #pause .setSection h3, .settingsPanel .setSection h3 {
+  color: #b9c8f2; opacity: 1; font-family: 'Archivo Black', sans-serif; font-weight: 400;
+  letter-spacing: 2px; font-size: 12px;
+}
+.setNote { color: #93a7dd; opacity: 1; }
+.panel button, #results button {
+  font-family: 'Poppins', sans-serif; font-weight: 700; letter-spacing: .5px;
+  background: rgba(46,107,255,.1); border: 1.5px solid rgba(46,107,255,.55); border-radius: 4px;
+  color: var(--st-text); transition: box-shadow .15s, background .15s, transform .08s;
+}
+.panel button:hover, #results button:hover { background: rgba(46,107,255,.22); box-shadow: 0 0 12px rgba(46,107,255,.4); }
+/* the one warm hero per screen */
+.panel > button:first-of-type, #results button:first-of-type {
+  background: linear-gradient(180deg, var(--st-orange-hot), var(--st-orange));
+  border: none; color: #1d0e00; font-family: 'Archivo Black', sans-serif; letter-spacing: 1.5px;
+  box-shadow: 0 0 16px var(--st-oglow), 0 3px 0 #b35c00;
+}
+.panel > button:first-of-type:hover, #results button:first-of-type:hover {
+  background: linear-gradient(180deg, #ffb257, var(--st-orange)); box-shadow: 0 0 22px var(--st-oglow), 0 3px 0 #b35c00;
+}
+.panel > button:first-of-type:active, #results button:first-of-type:active { transform: translateY(2px); box-shadow: 0 0 16px var(--st-oglow), 0 1px 0 #b35c00; }
+.settingsPanel .closeSet, .garagePanel .closeSet { background: rgba(46,107,255,.1) !important;
+  border: 1.5px solid rgba(46,107,255,.55); color: var(--st-text); }
+.settingsPanel .closeSet:hover, .garagePanel .closeSet:hover { background: rgba(46,107,255,.22) !important; }
+
+/* seg rows */
+.segRow button {
+  background: rgba(8,14,30,.65) !important; border: 1.5px solid rgba(46,107,255,.35);
+  border-radius: 4px; color: #cdd9f7; font-weight: 700; font-size: 12px; letter-spacing: .5px;
+}
+.segRow button:hover { background: rgba(46,107,255,.14) !important; }
+.segRow button.sel {
+  background: rgba(46,107,255,.3) !important; border-color: var(--st-blue-hot); color: #fff;
+  box-shadow: 0 0 10px rgba(46,107,255,.45), inset 0 0 10px rgba(46,107,255,.18);
+}
+#pauseWManual button, #wManualRow button { font-size: 11.5px; }
+#pairPedalBtn, #pairBrakeBtn { background: rgba(8,14,30,.65) !important; border: 1.5px solid rgba(46,107,255,.35) !important; border-radius: 4px; }
+#blurSlider, #bezelSlider, .volRow input[type="range"] { accent-color: var(--st-blue); }
+#pedalMon { color: var(--st-blue-hot); background: #070d1e; border: 1px solid rgba(46,107,255,.3); border-radius: 4px; }
+
+/* pair modal */
+.pairUrl { background: #070d1e; border: 1px solid rgba(46,107,255,.3); border-radius: 4px; }
+.pairCode { color: var(--st-orange-hot); }
+.pairStatus { background: rgba(46,107,255,.1); border-radius: 4px; }
+.pairStatus.ok { background: rgba(46,107,255,.28); color: #cdd9f7; }
+
+/* ---- venue cards in Storm language ---- */
+#menu .card {
+  background: var(--st-glass2); border: 1.5px solid rgba(46,107,255,.55); border-radius: 6px;
+  box-shadow: 0 0 12px rgba(46,107,255,.18); color: var(--st-text);
+}
+#menu .card:hover { border-color: var(--st-blue-hot); box-shadow: 0 0 20px var(--st-glow); transform: translateY(-2px); }
+#menu .card canvas { background: #0a1128; border: 1.5px solid rgba(46,107,255,.4); border-radius: 4px; }
+#menu .cardName { font-family: 'Archivo Black', sans-serif; font-weight: 400; color: var(--st-text); letter-spacing: .5px; }
+#menu .cardDesc { color: #93a7dd; opacity: 1; }
+#menu .cardBest { color: var(--st-orange-hot); opacity: 1; }
+#menu .cardBtns button {
+  font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 1px;
+  background: rgba(46,107,255,.16); color: var(--st-text);
+  border: 1.5px solid var(--st-blue); border-radius: 4px; box-shadow: none;
+  text-shadow: none; padding: 10px 8px;
+}
+#menu .cardBtns button:hover { background: rgba(46,107,255,.3); box-shadow: 0 0 12px rgba(46,107,255,.4); }
+#menu .cardBtns button:active { transform: translateY(2px); box-shadow: none; }
+#menu .cardBtns button:first-child {
+  background: linear-gradient(180deg, var(--st-orange-hot), var(--st-orange));
+  border: none; color: #1d0e00; box-shadow: 0 0 12px rgba(255,140,26,.35), 0 2px 0 #b35c00;
+}
+#menu .cardBtns button:first-child:hover { background: linear-gradient(180deg, #ffb257, var(--st-orange)); }
+/* badges: flat glass, mode color as TEXT, no tilt */
+#menu .cardMode, #menu .card:nth-child(even) .cardMode { transform: none; }
+#menu .cardMode { border: 1px solid rgba(46,107,255,.4); border-radius: 3px;
+  font-family: 'Poppins', sans-serif; font-weight: 800; }
+#menu .m-f1        { background: rgba(6,11,24,.7); color: #ff5c4d; }
+#menu .m-speedkart { background: rgba(6,11,24,.7); color: #ffd23d; }
+#menu .m-rally     { background: rgba(6,11,24,.7); color: #4ade80; }
+#menu .m-circuit   { background: rgba(6,11,24,.7); color: var(--st-blue-hot); }
+#menu .m-smashkart { background: rgba(6,11,24,.7); color: var(--st-orange-hot); }
+#menu .m-finale    { background: rgba(6,11,24,.7); color: #fff; border-color: var(--st-orange); }
+#menu #hardBtn.hard { background: rgba(255,140,26,.1); border-color: var(--st-orange);
+  color: var(--st-orange-hot); box-shadow: 0 0 12px rgba(255,140,26,.35); }
+#menu::after { content: none; }   /* the paper grain died with the poster */
+
+/* ---- results ---- */
+#results table { background: var(--st-glass2); border: 1.5px solid var(--st-blue); border-radius: 6px;
+  box-shadow: 0 0 18px rgba(46,107,255,.25); font-family: 'Poppins', sans-serif; }
+#results td { border-bottom: 1px solid rgba(46,107,255,.12); }
+#results tr.me { background: rgba(46,107,255,.24); }
+.payout { color: var(--st-orange-hot); }
+
+/* ---- THE GARAGE: Storm service bay ---- */
+.garagePanel { background: linear-gradient(180deg, #0a1128 0%, #0d1734 55%, #101c40 100%);
+  border: none; border-top: 2px solid var(--st-blue);
+  box-shadow: inset 0 1px 18px rgba(46,107,255,.15); }
+.garagePanel h2 { font-family: 'Archivo Black', sans-serif; color: var(--st-text);
+  letter-spacing: 3px; text-shadow: 0 0 14px var(--st-glow); }
+.garageSub { color: #93a7dd; }
+.corsas { color: var(--st-orange-hot); }
+.garagePanel .setNote { color: var(--st-orange); letter-spacing: 3px; }
+.garagePanel button.gDoor {
+  background: var(--st-glass2); color: var(--st-text);
+  border: 1.5px solid var(--st-blue); border-radius: 6px;
+  box-shadow: 0 0 14px rgba(46,107,255,.22); text-shadow: none;
+}
+.garagePanel button.gDoor:hover { box-shadow: 0 0 22px var(--st-glow); transform: translateY(-2px); }
+.garagePanel button.gDoor b { color: var(--st-text); font-family: 'Archivo Black', sans-serif; font-weight: 400; letter-spacing: 1.5px; }
+.garagePanel button.gDoor span { color: #93a7dd; }
+.gDoor i { line-height: 0; }
+.gDoor i svg { width: 38px; height: 38px; fill: var(--st-orange); filter: drop-shadow(0 0 7px rgba(255,140,26,.5)); }
+.garagePanel button.gDoor.locked { background: rgba(8,14,30,.55); border-style: dashed; opacity: .65; filter: none; }
+.garagePanel button.gDoor.locked i svg { fill: #7d92c9; filter: none; }
+.garagePanel button.gDoor.locked em { color: var(--st-orange); }
+.garagePanel .bayCard { background: var(--st-glass2); color: var(--st-text);
+  border: 1.5px solid rgba(46,107,255,.45); border-radius: 6px; }
+.garagePanel .bayCard.active { border-color: var(--st-blue-hot); box-shadow: 0 0 14px rgba(46,107,255,.4); }
+.garagePanel .bayCard small { color: #8fa8e8; opacity: 1; }
+.bayPaint { border-color: rgba(238,243,255,.5); }
+.garagePanel .bayCard.active button[data-race] {
+  background: linear-gradient(180deg, var(--st-orange-hot), var(--st-orange));
+  border: none; color: #1d0e00; font-weight: 800;
+}
+.garagePanel button.newBay { background: rgba(46,107,255,.05); color: var(--st-text);
+  border: 2px dashed rgba(46,107,255,.5); box-shadow: none; }
+.garagePanel button.newBay b { color: var(--st-blue-hot); }
+#kartName { background: #070d1e; color: var(--st-text); border: 1.5px solid rgba(46,107,255,.5); border-radius: 4px; }
+.garagePanel #gSave { background: linear-gradient(180deg, var(--st-orange-hot), var(--st-orange));
+  border: none; color: #1d0e00; font-family: 'Archivo Black', sans-serif; letter-spacing: 1px;
+  box-shadow: 0 0 14px var(--st-oglow), 0 3px 0 #b35c00; }
+.garagePanel #kitPreview { background: #0a1128; border: 1.5px solid rgba(46,107,255,.4); border-radius: 6px; }
+/* snap wheel */
+.garagePanel #catHead button { background: rgba(46,107,255,.14); color: var(--st-text);
+  border: 1.5px solid var(--st-blue); border-radius: 4px; box-shadow: none; }
+#catHead b { color: var(--st-orange-hot); font-family: 'Archivo Black', sans-serif; font-weight: 400; letter-spacing: 2px; }
+#catDots i { background: rgba(46,107,255,.3); }
+#catDots i.on { background: var(--st-orange); box-shadow: 0 0 6px rgba(255,140,26,.7); }
+#snapWheelWrap::before { border-top: 1.5px solid var(--st-blue-hot); border-bottom: 1.5px solid var(--st-blue-hot);
+  background: rgba(46,107,255,.08); box-shadow: 0 0 14px rgba(46,107,255,.25); }
+#snapWheelWrap::after { background: linear-gradient(#0b1430 0%, transparent 26%, transparent 74%, #0f1a3a 100%); }
+.wCard { background: rgba(12,20,44,.92); border: 1.5px solid rgba(46,107,255,.35); border-radius: 5px; }
+.wCard b { color: var(--st-text); }
+.wCard small { color: #8fa8e8; }
+.wCard.centered { border-color: var(--st-blue-hot); box-shadow: 0 0 12px rgba(46,107,255,.45); }
+.wSwatch { border-color: rgba(238,243,255,.6); }
+#wheelHint { color: #7d92c9; }
+.loBar span, .garagePanel #loadoutBars .loBar span { color: #b9c8f2; opacity: 1; }
+.loBar div, .garagePanel #loadoutBars .loBar div { background: rgba(46,107,255,.14); }
+.loBar i { background: linear-gradient(90deg, var(--st-blue), var(--st-blue-hot)); }
+.loChip { background: rgba(8,14,30,.6); color: #cdd9f7; border: 1.5px solid rgba(46,107,255,.35); }
+.loChip.sel { background: rgba(46,107,255,.35); color: #fff; border-color: var(--st-blue-hot) !important; }
+.loFam { color: #8fa8e8; }
+
+/* ---- THE PARTS SHOP ---- */
+.sponsorCard { background: var(--st-glass2); color: var(--st-text);
+  border: 1.5px solid var(--st-blue); border-radius: 5px; box-shadow: 0 0 10px rgba(46,107,255,.2); }
+.sponsorCard:hover { box-shadow: 0 0 16px var(--st-glow); }
+.sponsorCard:active { transform: translateY(2px); box-shadow: 0 0 10px rgba(46,107,255,.2); }
+.sponsorCard span { color: #8fa8e8; opacity: 1; }
+.sponsorCard em { color: var(--st-orange-hot); }
+#famRow button.sel { background: rgba(46,107,255,.3) !important; color: #fff; border-color: var(--st-blue-hot); }
+#partSearch { background: #070d1e; color: var(--st-text); border: 1.5px solid rgba(46,107,255,.5); border-radius: 4px; }
+#storeList { border: 1.5px solid rgba(46,107,255,.3); border-radius: 5px; }
+.partRow { border-bottom: 1px solid rgba(46,107,255,.12); }
+.partRow b { color: var(--st-text); }
+.partRow small { color: #8fa8e8; opacity: 1; }
+.ownedN { color: var(--st-blue-hot); }
+.cardNeed { color: var(--st-orange); }
+.invChip { background: rgba(46,107,255,.1); border: 1.5px solid rgba(46,107,255,.4); color: #cdd9f7; }
+.cardChip { border-color: var(--st-orange); }
+#packReveal { background: rgba(3,6,16,.93); z-index: 90; }
+.packArt { background: linear-gradient(160deg, #12225c, #0a1128 55%, rgba(255,140,26,.14));
+  border: 2px solid var(--st-orange); border-radius: 6px; color: var(--st-text);
+  box-shadow: 0 0 40px rgba(255,140,26,.35); }
+.pullCard { background: var(--st-glass2); border: 2px solid rgba(46,107,255,.5); border-radius: 5px; }
+.pullCard b { color: var(--st-text); }
+.pullCard small { color: #8fa8e8; }
+.pullCard.rar-solid { border-color: var(--st-blue); }
+.pullCard.rar-rare { border-color: var(--st-orange); box-shadow: 0 0 18px rgba(255,140,26,.55); }
+.pullCard.rar-legendary { border-color: #fff; box-shadow: 0 0 22px rgba(255,255,255,.55), 0 0 44px rgba(255,140,26,.5); }
+.pullCard.isCard { background: rgba(12,20,44,.7); border-style: dashed; }
+
+/* ---- race HUD in Storm language ---- */
+#trackLabel { font-family: 'Archivo Black', sans-serif; color: #cdd9f7; letter-spacing: 3px;
+  text-shadow: 0 0 10px rgba(46,107,255,.45); }
+#bestLap { color: var(--st-orange-hot); }
+#leaderboard .lbRow { background: rgba(5,10,22,.62); border-radius: 4px; }
+#leaderboard .lbRow.me { background: rgba(46,107,255,.55); box-shadow: 0 0 0 1px rgba(77,134,255,.7); }
+#leaderboard .pos { color: #8fa8e8; }
+#minimap { background: rgba(5,10,22,.6); border: 1.5px solid rgba(46,107,255,.4); border-radius: 6px; }
+#countdown { font-family: 'Archivo Black', sans-serif; color: #fff;
+  text-shadow: 0 0 34px rgba(46,107,255,.65), 0 4px 0 rgba(4,8,20,.8); }
+#toast { background: rgba(5,10,22,.85); border: 1.5px solid rgba(46,107,255,.5); border-radius: 5px;
+  font-family: 'Poppins', sans-serif; font-weight: 700; }
+#itemBox { background: var(--st-glass); border: 2.5px solid var(--st-blue);
+  box-shadow: 0 0 12px rgba(46,107,255,.5); }
+@media (max-width: 860px) {
+  #posBox, #timeBox { background: rgba(5,10,22,.65); border: 1px solid rgba(46,107,255,.45); border-radius: 5px; }
+  #speedBox { background: rgba(5,10,22,.6); border: 1px solid rgba(46,107,255,.4); border-radius: 5px; }
+  #leaderboard .lbRow { background: rgba(5,10,22,.62); }
+}
+
+/* ---- touch cockpit recolor ---- */
+.tZone span { font-family: 'Archivo Black', sans-serif; color: rgba(238,243,255,.4);
+  text-shadow: 0 1px 4px rgba(3,6,16,.6); }
+.tZone.held span { color: #fff; }
+.tBtn { font-family: 'Archivo Black', sans-serif; color: rgba(238,243,255,.7);
+  border-color: rgba(238,243,255,.4); background: rgba(5,10,22,.35); text-shadow: none; }
+.tBtn.held { background: rgba(255,140,26,.9); border-color: #fff; color: #1d0e00; }
+#tBrakeSm.held { background: rgba(46,107,255,.9); color: #fff; }
+.tPedal { background: rgba(5,10,22,.35); border: 1px solid rgba(238,243,255,.3);
+  color: rgba(238,243,255,.7); border-radius: 6px; text-shadow: none; }
+#tBrake { background: rgba(46,107,255,.2); }
+#tHandbrake { background: rgba(255,140,26,.22); }
+.tPedal.held { background: rgba(46,107,255,.4); border-color: var(--st-blue-hot); color: #fff; }
+#tWheel { border-color: rgba(238,243,255,.5); }
+#tWheel .tSpoke { background: rgba(238,243,255,.4); }
+#tWheel .tHub { background: rgba(255,140,26,.9); }
+#tWheel .tTop { background: var(--st-blue-hot); }
+#tMini button { background: rgba(5,10,22,.42); border: 1px solid rgba(238,243,255,.3); color: rgba(238,243,255,.85); }
+#tMini button svg { width: 17px; height: 17px; fill: currentColor; display: block; margin: auto; }
+#tMini button.on { background: rgba(46,107,255,.85); border-color: var(--st-blue-hot); }
+/* the account input: out-rank the old poster rule (id+id specificity) */
+#accountScreen #usernameInput { background: #0a1128; color: var(--st-text); border-color: rgba(46,107,255,.5); }
+#accountScreen #usernameInput:focus { border-color: var(--st-blue-hot); }
+#menu #quickRace span { font-family: 'Poppins', sans-serif; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; }
+.garagePanel .closeSet, .settingsPanel .closeSet { font-family: 'Poppins', sans-serif; font-weight: 700; }
+/* kill the legacy "first button is red" rule for NESTED buttons (it was hitting
+   the first sponsor card, first bay button, etc.) — then re-assert the hero
+   for DIRECT panel children (Resume, Close) which must stay orange */
+.panel button:first-of-type { background: rgba(46,107,255,.1); }
+.panel button:first-of-type:hover { background: rgba(46,107,255,.22); }
+.panel > button:first-of-type, #results button:first-of-type {
+  background: linear-gradient(180deg, var(--st-orange-hot), var(--st-orange));
+  border: none; color: #1d0e00; font-family: 'Archivo Black', sans-serif; letter-spacing: 1.5px;
+  box-shadow: 0 0 16px var(--st-oglow), 0 3px 0 #b35c00;
+}
+.panel > button:first-of-type:hover, #results button:first-of-type:hover {
+  background: linear-gradient(180deg, #ffb257, var(--st-orange));
+}
+.sponsorCard { background: var(--st-glass2) !important; }
+
+/* ═══ V16.1 STICKER-CUT (2026-08-07, Adam: "90 degree angles with the sticker
+   hints") — every rectangle goes hard-square, and key shapes get a die-cut
+   sticker edge: a hairline light outline floating just off the shape.
+   Round things that are GAME controls (wheel, drift button, item box, color
+   swatches, dots) stay round on purpose. ═══ */
+.panel, .panel button, #results button, #results table, .segRow button,
+#menu .navBtn, #menu #quickRace, #menu .card, #menu .card canvas, #menu .cardMode,
+#menu .cardBtns button, #tabBar button, .sponsorCard, #partSearch, #storeList,
+.invChip, .cardChip, .loChip, .pullCard, .packArt, .bayCard, .bayPaint,
+.garagePanel button.gDoor, #kartName, #kitPreview, .garagePanel #catHead button,
+.wCard, .wSwatch, #posBox, #timeBox, #speedBox, #minimap, #toast,
+#leaderboard .lbRow, #leaderboard .sw, .tPedal, #tMini button, #nowPlaying,
+.pairUrl, .pairStatus, #pedalMon, #usernameInput, #accountScreen .acctBox,
+#menu .crest::before, #introSplash .iFlag, #itemBox .cardIcon {
+  border-radius: 0;
+}
+
+/* the die-cut edge — panels & cards get a whisper, heroes get the full sticker */
+.panel { outline: 1px solid rgba(238,243,255,.2); outline-offset: 4px; }
+#menu .card { outline: 1px solid rgba(238,243,255,.16); outline-offset: 3px; }
+#menu .cardMode { outline: 1px solid rgba(238,243,255,.25); outline-offset: 2px; }
+#menu #quickRace, .panel > button:first-of-type, #results button:first-of-type,
+.garagePanel #gSave, #menu .cardBtns button:first-child, #accountScreen .acctBox button {
+  outline: 1.5px solid rgba(255,255,255,.55); outline-offset: 2.5px;
+}
+#menu .crest::before { outline: 1.5px solid rgba(255,255,255,.6); outline-offset: 3px; }
+#introSplash .iFlag { outline: 2px solid rgba(255,255,255,.7); outline-offset: 3px; border: none; }
+#tabBar button.on { outline: 1px solid rgba(255,140,26,.5); outline-offset: 2px; }
+#nowPlaying { outline: 1px solid rgba(238,243,255,.2); outline-offset: 2px; }
+
+/* the pack-done button lived outside any panel and was still poster-red */
+#packReveal button {
+  background: linear-gradient(180deg, var(--st-orange-hot), var(--st-orange));
+  color: #1d0e00; border: none; border-radius: 0; font-family: 'Archivo Black', sans-serif;
+  letter-spacing: 1px; box-shadow: 0 0 16px var(--st-oglow), 0 3px 0 #b35c00;
+  outline: 1.5px solid rgba(255,255,255,.55); outline-offset: 2.5px;
+}
+/* stragglers whose old rules out-rank the square sweep */
+.garagePanel .closeSet, .settingsPanel .closeSet, .garagePanel #kitPreview,
+#pairQR, #accountScreen .acctBox button { border-radius: 0; }

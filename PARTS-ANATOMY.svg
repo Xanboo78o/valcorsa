@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 960" font-family="Verdana, Geneva, sans-serif">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a1128"/><stop offset="1" stop-color="#101c40"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="960" fill="url(#sky)"/>
+
+  <!-- header -->
+  <text x="640" y="52" text-anchor="middle" fill="#eef3ff" font-size="30" font-weight="bold" letter-spacing="6">VALCORSA PARTS SYSTEM v2 — THE ANATOMY</text>
+  <text x="640" y="80" text-anchor="middle" fill="#8fa8e8" font-size="14" letter-spacing="2">PROPOSAL — 13 systems · atoms in each · every family speaks its own code dialect</text>
+  <text x="640" y="102" text-anchor="middle" fill="#ff8c1a" font-size="13" font-weight="bold" letter-spacing="1">SIZE IS LAW: S / M / L bays and mounts — codes tell you what bolts to what</text>
+
+  <!-- column 1: THE ENGINE STACK -->
+  <g>
+    <rect x="30" y="130" width="390" height="26" fill="#2e6bff" opacity=".25"/>
+    <text x="225" y="148" text-anchor="middle" fill="#4d86ff" font-size="15" font-weight="bold" letter-spacing="3">THE ENGINE STACK</text>
+
+    <rect x="30" y="166" width="390" height="150" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="46" y="190" fill="#eef3ff" font-size="15" font-weight="bold">1 · ENGINE INTERNALS</text>
+    <text x="46" y="212" fill="#b9c8f2" font-size="12">block · crankshaft · pistons ×N · rods · camshaft ·</text>
+    <text x="46" y="230" fill="#b9c8f2" font-size="12">cylinder head · valves · head gasket</text>
+    <text x="46" y="258" fill="#ff8c1a" font-size="12" font-weight="bold">code:  B-L2 2400   →  block · Large 2-mount · 2400 cc</text>
+    <text x="46" y="278" fill="#ff8c1a" font-size="12" font-weight="bold">code:  CAM-R3      →  camshaft · Race grind 3</text>
+    <text x="46" y="300" fill="#7d92c9" font-size="11" font-style="italic">block sets the ceiling — everything else shapes the curve</text>
+
+    <rect x="30" y="328" width="390" height="118" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="46" y="352" fill="#eef3ff" font-size="15" font-weight="bold">2 · INDUCTION</text>
+    <text x="46" y="374" fill="#b9c8f2" font-size="12">air filter · intake manifold · carb / injectors ·</text>
+    <text x="46" y="392" fill="#b9c8f2" font-size="12">turbocharger · intercooler · blow-off valve</text>
+    <text x="46" y="418" fill="#ff8c1a" font-size="12" font-weight="bold">code:  T3-M  →  turbo class 3 · fits M+ exhaust flange</text>
+
+    <rect x="30" y="474" width="390" height="96" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="46" y="498" fill="#eef3ff" font-size="15" font-weight="bold">3 · FUEL</text>
+    <text x="46" y="520" fill="#b9c8f2" font-size="12">tank · pump · filter · lines</text>
+    <text x="46" y="546" fill="#ff8c1a" font-size="12" font-weight="bold">code:  FP-240  →  pump · 240 flow</text>
+
+    <rect x="30" y="598" width="390" height="96" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="46" y="622" fill="#eef3ff" font-size="15" font-weight="bold">4 · EXHAUST</text>
+    <text x="46" y="644" fill="#b9c8f2" font-size="12">manifold · pipe · muffler  (this is where SOUND lives)</text>
+    <text x="46" y="670" fill="#ff8c1a" font-size="12" font-weight="bold">code:  EX-L 60  →  Large flange · 60 mm bore</text>
+
+    <rect x="30" y="722" width="390" height="118" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="46" y="746" fill="#eef3ff" font-size="15" font-weight="bold">5 · COOLING</text>
+    <text x="46" y="768" fill="#b9c8f2" font-size="12">radiator · fan · water pump · hoses · coolant</text>
+    <text x="46" y="794" fill="#ff8c1a" font-size="12" font-weight="bold">code:  RAD-M2  →  radiator · M frame · 2-core</text>
+    <text x="46" y="816" fill="#ff8c1a" font-size="12" font-weight="bold">code:  C10-40  →  coolant/oil · cold 10 · hot 40</text>
+  </g>
+
+  <!-- column 2: MOTION + CONTROL -->
+  <g>
+    <rect x="445" y="130" width="390" height="26" fill="#2e6bff" opacity=".25"/>
+    <text x="640" y="148" text-anchor="middle" fill="#4d86ff" font-size="15" font-weight="bold" letter-spacing="3">MOTION &amp; CONTROL</text>
+
+    <rect x="445" y="166" width="390" height="118" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="461" y="190" fill="#eef3ff" font-size="15" font-weight="bold">6 · DRIVETRAIN</text>
+    <text x="461" y="212" fill="#b9c8f2" font-size="12">clutch · gearbox · driveshaft · differential · axles</text>
+    <text x="461" y="238" fill="#ff8c1a" font-size="12" font-weight="bold">code:  GB-M5c  →  gearbox · M mate · 5-speed close</text>
+    <text x="461" y="260" fill="#ff8c1a" font-size="12" font-weight="bold">code:  DF-LS   →  differential · limited-slip</text>
+
+    <rect x="445" y="312" width="390" height="96" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="461" y="336" fill="#eef3ff" font-size="15" font-weight="bold">7 · SUSPENSION</text>
+    <text x="461" y="358" fill="#b9c8f2" font-size="12">springs · dampers · sway bars · control arms</text>
+    <text x="461" y="384" fill="#ff8c1a" font-size="12" font-weight="bold">code:  SP-M 45  →  spring · M seat · 45 stiffness</text>
+
+    <rect x="445" y="436" width="390" height="96" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="461" y="460" fill="#eef3ff" font-size="15" font-weight="bold">8 · BRAKES</text>
+    <text x="461" y="482" fill="#b9c8f2" font-size="12">rotors · calipers · pads · lines · handbrake</text>
+    <text x="461" y="508" fill="#ff8c1a" font-size="12" font-weight="bold">code:  BD-280 / CAL-4  →  280 mm rotor · 4-pot caliper</text>
+
+    <rect x="445" y="560" width="390" height="96" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="461" y="584" fill="#eef3ff" font-size="15" font-weight="bold">9 · WHEELS &amp; TIRES</text>
+    <text x="461" y="606" fill="#b9c8f2" font-size="12">rims · tires  (the code you already approved)</text>
+    <text x="461" y="632" fill="#ff8c1a" font-size="12" font-weight="bold">code:  210/55 R14-S  →  width/profile · rim 14 · Soft</text>
+
+    <rect x="445" y="684" width="390" height="156" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="461" y="708" fill="#eef3ff" font-size="15" font-weight="bold">10 · ELECTRICAL</text>
+    <text x="461" y="730" fill="#b9c8f2" font-size="12">battery · ECU · ignition coil · spark plugs · wiring ·</text>
+    <text x="461" y="748" fill="#b9c8f2" font-size="12">fuses · headlights · sensors / gauges senders</text>
+    <text x="461" y="774" fill="#ff8c1a" font-size="12" font-weight="bold">code:  F-30      →  fuse · 30 amp (blows for real)</text>
+    <text x="461" y="796" fill="#ff8c1a" font-size="12" font-weight="bold">code:  W-2.5 ×5m →  wire · 2.5 gauge · 5 meters</text>
+    <text x="461" y="818" fill="#7d92c9" font-size="11" font-style="italic">the future soldering / symptoms system plugs in here</text>
+  </g>
+
+  <!-- column 3: BODY + HUMAN + HARDWARE -->
+  <g>
+    <rect x="860" y="130" width="390" height="26" fill="#2e6bff" opacity=".25"/>
+    <text x="1055" y="148" text-anchor="middle" fill="#4d86ff" font-size="15" font-weight="bold" letter-spacing="3">BODY · HUMAN · HARDWARE</text>
+
+    <rect x="860" y="166" width="390" height="96" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="876" y="190" fill="#eef3ff" font-size="15" font-weight="bold">11 · AERO &amp; BODY</text>
+    <text x="876" y="212" fill="#b9c8f2" font-size="12">wings · splitter · panels · fenders</text>
+    <text x="876" y="238" fill="#ff8c1a" font-size="12" font-weight="bold">code:  WG-M 320  →  wing · M rails · 320 downforce</text>
+
+    <rect x="860" y="290" width="390" height="118" fill="rgba(12,20,44,.9)" stroke="#2e6bff" stroke-width="1.5"/>
+    <text x="876" y="314" fill="#eef3ff" font-size="15" font-weight="bold">12 · COCKPIT</text>
+    <text x="876" y="336" fill="#b9c8f2" font-size="12">seat · steering wheels · gauges · helper buttons</text>
+    <text x="876" y="354" fill="#b9c8f2" font-size="12">(the engineer BUILDS the driver's HUD from these)</text>
+    <text x="876" y="380" fill="#ff8c1a" font-size="12" font-weight="bold">code:  GA-TEMP  →  gauge · reads coolant sender</text>
+
+    <rect x="860" y="436" width="390" height="140" fill="rgba(12,20,44,.9)" stroke="#ff8c1a" stroke-width="1.5"/>
+    <text x="876" y="460" fill="#ffa53d" font-size="15" font-weight="bold">13 · HARDWARE (consumables)</text>
+    <text x="876" y="482" fill="#b9c8f2" font-size="12">bolts · washers · hose · wire spools · duct tape ·</text>
+    <text x="876" y="500" fill="#b9c8f2" font-size="12">zip ties · gasket paper  — the economy floor</text>
+    <text x="876" y="526" fill="#ff8c1a" font-size="12" font-weight="bold">code:  VM8×24  →  Valcorsa Metric 8 bolt · 24 mm</text>
+    <text x="876" y="548" fill="#7d92c9" font-size="11" font-style="italic">these live loose in the bins. your REAL bins.</text>
+
+    <rect x="860" y="604" width="390" height="236" fill="rgba(12,20,44,.6)" stroke="#4d86ff" stroke-width="1" stroke-dasharray="6 4"/>
+    <text x="876" y="630" fill="#4d86ff" font-size="14" font-weight="bold" letter-spacing="2">HOW A CARD READS</text>
+    <text x="876" y="658" fill="#eef3ff" font-size="13" font-weight="bold">ENGINOS · TEMPESTA</text>
+    <text x="876" y="678" fill="#ffa53d" font-size="13" font-weight="bold">B-L2 2400 block</text>
+    <text x="876" y="702" fill="#b9c8f2" font-size="12">displacement   2400 cc</text>
+    <text x="876" y="722" fill="#b9c8f2" font-size="12">mounts         L · 2-point</text>
+    <text x="876" y="742" fill="#b9c8f2" font-size="12">mass           88 kg</text>
+    <text x="876" y="762" fill="#b9c8f2" font-size="12">max cam        R4</text>
+    <text x="876" y="782" fill="#b9c8f2" font-size="12">turbo flange   M / L</text>
+    <text x="876" y="810" fill="#7d92c9" font-size="11" font-style="italic">brand carries personality · the code carries the truth</text>
+  </g>
+
+  <!-- footer -->
+  <text x="640" y="890" text-anchor="middle" fill="#8fa8e8" font-size="13" letter-spacing="1">MARK IT UP: what's missing? what's too deep? what should a 6th-grader be able to read by season 2?</text>
+  <text x="640" y="916" text-anchor="middle" fill="#7d92c9" font-size="11" font-style="italic">all codes are first drafts — the dialects get designed family by family, with you</text>
+</svg>

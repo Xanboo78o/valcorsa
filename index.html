@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Valcorsa — Home of Racing</title>
+<meta name="theme-color" content="#1e5741">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Valcorsa">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+<script>
+  if ('serviceWorker' in navigator && location.protocol === 'https:')
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+</script>
+</head>
+<body>
+<div id="game"></div>
+
+<!-- INTRO: four cars fly past, their color sticks, the flag assembles, the name drops -->
+<div id="introSplash">
+  <div class="smear q1"></div><div class="smear q2"></div>
+  <div class="smear q3"></div><div class="smear q4"></div>
+  <div class="introBrand"><div class="iFlag"></div><h1>VALCORSA</h1><p>HOME OF RACING</p></div>
+</div>
+<script>
+(function () {
+  const ov = document.getElementById('introSplash');
+  if (sessionStorage.getItem('vc_intro')) { ov.remove(); return; }
+  sessionStorage.setItem('vc_intro', '1');
+  requestAnimationFrame(() => ov.classList.add('run'));
+  const end = () => { ov.classList.add('out'); setTimeout(() => ov.remove(), 500); };
+  ov.addEventListener('pointerdown', end);
+  setTimeout(end, 4200);
+})();
+</script>
+
+<!-- Account creation (first visit only; saved to this device) -->
+<div id="accountScreen">
+  <div class="menuInner">
+    <h1>VAL<span>CORSA</span></h1>
+    <p class="tagline">Valcorsa, home of racing — create your racer</p>
+    <div class="acctBox">
+      <input id="usernameInput" maxlength="16" placeholder="Username" autocomplete="off">
+      <button onclick="submitAccount()">Create Account</button>
+      <p class="acctNote">Saved to this device — no password, no re-login. You'll get a code for pairing your phone.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Account chip (top-right on the menu) -->
+<div id="acctChip">
+  <span id="acctDot" class="dot off"></span>
+  <span class="acctText">👤 <b id="acctName"></b> &nbsp;·&nbsp; code <b id="acctCode"></b></span>
+  <button onclick="openPair()">📱 Pair Phone</button>
+</div>
+
+<!-- Pair modal -->
+<div id="pairModal">
+  <div class="panel">
+    <h2>Pair Your Phone</h2>
+    <p>Open this on your phone's browser:</p>
+    <div class="pairUrl" id="pairUrl"></div>
+    <img id="pairQR" alt="Scan to open on phone" width="180" height="180">
+    <p>Then enter your code:</p>
+    <div class="pairCode" id="pairCodeBig"></div>
+    <div class="pairStatus" id="pairStatus">Waiting for phone…</div>
+    <p class="acctNote">Hold the phone like a wheel and turn it to steer. Throttle/brake stay on W/S here.</p>
+    <button onclick="closePair()">Close</button>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="hudTop">
+    <div id="posBox">
+      <div id="position">P1</div>
+      <div id="lapCount">Lap 1 / 3</div>
+    </div>
+    <div id="trackLabel"></div>
+    <div id="timeBox">
+      <div id="curLap" class="big">0:00.000</div>
+      <div id="lastLap">Last --:--.---</div>
+      <div id="bestLap">Best --:--.---</div>
+    </div>
+  </div>
+  <div id="itemBox"></div>
+  <div id="leaderboard"></div>
+  <div id="speedBox">
+    <span id="speed">0</span><span class="unit">km/h</span>
+  </div>
+  <canvas id="minimap" width="180" height="130"></canvas>
+  <div id="hint">W or click throttle&nbsp;·&nbsp;S or right-click brake&nbsp;·&nbsp;A/D or phone-wheel steer&nbsp;·&nbsp;E item&nbsp;·&nbsp;Space handbrake&nbsp;·&nbsp;R reset&nbsp;·&nbsp;C camera&nbsp;·&nbsp;M mute&nbsp;·&nbsp;Esc pause</div>
+</div>
+
+<div id="toast"></div>
+<div id="nowPlaying" style="display:none"><span class="eq"><i></i><i></i><i></i><i></i></span><span id="npTrack">rally house radio</span></div>
+<div id="countdown"></div>
+
+<!-- Landscape lock: shown on touch devices held upright -->
+<div id="rotateOverlay">
+  <div class="rotateInner">
+    <div class="rotatePhone">📱</div>
+    <p>VALCORSA PLAYS SIDEWAYS</p>
+    <span>Rotate your phone to landscape</span>
+  </div>
+</div>
+<div id="perfHud"></div>
+
+<!-- Multi-screen pillar frame overlay (toggleable; matches the printed separators) -->
+<div id="pillarFrames">
+  <div class="seamL"></div>
+  <div class="seamR"></div>
+</div>
+
+<!-- First-person view (Cockpit camera): windshield only — YOUR wheel is the wheel -->
+<div id="fpOverlay">
+  <div class="pillarL"></div>
+  <div class="pillarR"></div>
+  <div class="headliner"></div>
+  <div class="glassGlare"></div>
+  <div class="vig"></div>
+</div>
+
+<!-- Menu -->
+<div id="menu">
+  <div class="flagStripe"></div>
+  <div class="menuInner">
+    <div class="crest">
+      <!-- the doodly crest: wobble in the path, never the width -->
+      <svg viewBox="0 0 100 100" width="82" height="82" aria-hidden="true">
+        <g transform="rotate(10 52 52)" fill="none" stroke="#1e5741" stroke-linecap="round">
+          <path stroke-width="4.6" d="M52 15.6 C 71.5 15.2, 88.6 31.4, 88.2 51.2 C 87.8 71.8, 71.9 87.6, 52.4 88.3 C 32.2 89.0, 15.8 72.4, 15.4 52.4 C 15.0 32.6, 31.8 16.2, 51.2 15.7 C 53.4 15.65, 55.8 16.1, 57.6 16.9"/>
+          <path stroke-width="2.4" opacity=".75" stroke="#c99a2e" d="M53.5 18.7 C 70.3 19.1, 84.9 33.2, 85.1 50.6 C 85.3 68.9, 70.6 84.5, 52.1 85.2 C 34.5 85.9, 18.9 71.2, 18.6 52.9 C 18.3 35.1, 33.2 19.5, 50.6 18.9"/>
+          <g stroke-width="5">
+            <path d="M52.3 21.5 L51.8 42.6"/>
+            <path d="M22.8 42.4 L42.9 48.9"/>
+            <path d="M33.6 76.9 L46.3 60.3"/>
+            <path d="M70.9 77.5 L58.2 60.6"/>
+            <path d="M81.5 42.0 L61.4 48.6"/>
+          </g>
+          <circle cx="52" cy="52" r="9.4" stroke-width="3.4"/>
+          <circle cx="52.9" cy="52.9" r="6.2" fill="#c73a2c" stroke="none"/>
+        </g>
+        <g fill="none" stroke="#1e5741" stroke-width="4" stroke-linecap="round" opacity=".8">
+          <path d="M13.5 24.5 C 9.5 27.5, 6.6 30.8, 4.6 34.6"/>
+          <path d="M20.0 15.9 C 16.2 18.3, 13.0 21.0, 10.4 24.0"/>
+          <path d="M29.3 9.6 C 26.4 11.0, 23.7 12.7, 21.2 14.7"/>
+        </g>
+      </svg>
+    </div>
+    <h1>VALCORSA</h1>
+    <p class="tagline">HOME OF RACING</p>
+    <p class="subline">Every town has a track. Every grid has locals. Pre-season testing is open.</p>
+    <div id="homeMenu" class="pg">
+      <button id="quickRace" onclick="startQuick()">QUICK RACE<span>Smashkart · Cañón del Perro Saltarín</span></button>
+      <div id="diffRow">
+        <button class="navBtn" id="openWorldBtn" onclick="startFreeRoam()">CRUISE SAN VOLANTE</button>
+      </div>
+    </div>
+    <div id="venuesMenu" class="pg" style="display:none">
+      <div class="vHead">
+        <h2>THE VENUES</h2>
+        <button class="navBtn" id="hardBtn" onclick="toggleHard()">Difficulty: Normal</button>
+      </div>
+      <div id="trackGrid"></div>
+    </div>
+  </div>
+  <script>
+    /* page swap with a transition; shell.js keeps the tab bar in sync */
+    function swapPg(hideEl, showEl) {
+      const hide = document.getElementById(hideEl), show = document.getElementById(showEl);
+      hide.style.display = 'none';
+      if (show.style.display !== 'none') return;              // already up
+      show.style.display = 'block';
+      show.classList.remove('pgIn'); void show.offsetWidth;   // restart the animation
+      show.classList.add('pgIn');
+    }
+    function showVenues() { swapPg('homeMenu', 'venuesMenu'); if (window.vcTabSync) vcTabSync(); }
+    function hideVenues() { swapPg('venuesMenu', 'homeMenu'); if (window.vcTabSync) vcTabSync(); }
+  </script>
+  <div class="flagStripe bottom"></div>
+</div>
+
+<!-- The paddock tab bar: solid icons, dark glass. shell.js shows/hides it and keeps state. -->
+<nav id="tabBar">
+  <button data-tab="home" onclick="vcTab('home')">
+    <svg viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg><span>HOME</span>
+  </button>
+  <button data-tab="venues" onclick="vcTab('venues')">
+    <svg viewBox="0 0 24 24"><path d="M5 3h2v18H5zM9 4h11l-2.6 4L20 12H9z"/></svg><span>VENUES</span>
+  </button>
+  <button data-tab="garage" onclick="vcTab('garage')">
+    <svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg><span>GARAGE</span>
+  </button>
+  <button data-tab="shop" onclick="vcTab('shop')">
+    <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.6L5.2 14c-.1.3-.2.6-.2 1 0 1.1.9 2 2 2h12v-2H7.4c-.1 0-.2-.1-.2-.2l.9-1.8h7.4c.8 0 1.4-.4 1.7-1l3.6-6.5c.1-.2.2-.4.2-.5 0-.6-.4-1-1-1H5.2L4.3 2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg><span>SHOP</span>
+  </button>
+  <button data-tab="settings" onclick="vcTab('settings')">
+    <svg viewBox="0 0 24 24"><path d="M19.1 12.9c0-.3.1-.6.1-.9s0-.6-.1-.9l2-1.6c.2-.1.2-.4.1-.6l-1.9-3.3c-.1-.2-.4-.3-.6-.2l-2.4 1c-.5-.4-1-.7-1.6-.9l-.4-2.5c0-.2-.2-.4-.5-.4h-3.8c-.2 0-.4.2-.5.4l-.4 2.5c-.6.2-1.1.5-1.6.9l-2.4-1c-.2-.1-.5 0-.6.2L2.7 9c-.1.2-.1.4.1.6l2 1.6c0 .3-.1.6-.1.9s0 .6.1.9l-2 1.6c-.2.1-.2.4-.1.6l1.9 3.3c.1.2.4.3.6.2l2.4-1c.5.4 1 .7 1.6.9l.4 2.5c0 .2.2.4.5.4h3.8c.2 0 .4-.2.5-.4l.4-2.5c.6-.2 1.1-.5 1.6-.9l2.4 1c.2.1.5 0 .6-.2l1.9-3.3c.1-.2.1-.4-.1-.6l-2.1-1.6zM12 15.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z"/></svg><span>SETTINGS</span>
+  </button>
+</nav>
+
+<!-- Garage: two doors, a livery stable, and the Simpleton builder (full screen) -->
+<div id="garageModal">
+  <div class="panel garagePanel">
+
+    <div id="gDoors">
+      <h2>THE GARAGE</h2>
+      <p class="garageSub">Enginos workshop, San Volante · balance <b class="corsas">₡<span data-corsas>0</span></b></p>
+      <div id="doorRow">
+        <button class="gDoor" id="doorSimple">
+          <i><svg viewBox="0 0 24 24"><path d="M12 2L2 8v14h5v-8h10v8h5V8zM9 18h6v4H9z"/></svg></i><b>SIMPLETON GARAGE</b>
+          <span>Chassis, paint, parts you own, stat bars. Build a kart, no wrenches required.</span>
+        </button>
+        <button class="gDoor locked" id="doorEng">
+          <i><svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg></i><b>ENGINEER GARAGE</b>
+          <span>Bolts, wires, fluids, the saw. The real bench.</span>
+          <em>opens with the sim core</em>
+        </button>
+      </div>
+      <p class="setNote">— YOUR LIVERY · THE STABLE —</p>
+      <div id="liveryRack"></div>
+      <button class="closeSet" onclick="closeGarage()">Back to the paddock</button>
+    </div>
+
+    <div id="gBuilder" style="display:none">
+      <div id="gBuildHead">
+        <button id="gBack">← Doors</button>
+        <h2>SIMPLETON GARAGE</h2>
+        <input id="kartName" maxlength="18" placeholder="Name this kart…" autocomplete="off">
+        <button id="gSave">SAVE TO LIVERY</button>
+      </div>
+      <div id="gBuildBody">
+        <div id="wheelCol">
+          <div id="catHead">
+            <button id="catPrev">◀</button>
+            <b id="catName">Chassis</b>
+            <button id="catNext">▶</button>
+          </div>
+          <div id="catDots"></div>
+          <div id="snapWheelWrap"><div id="snapWheel"></div></div>
+          <p id="wheelHint">scroll to lock one in · swipe ◀ ▶ for the next menu</p>
+        </div>
+        <div id="gRight">
+          <canvas id="kitPreview"></canvas>
+          <div id="loadoutBars"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Pause -->
+<div id="pause">
+  <div class="panel">
+    <h2>PAUSED</h2>
+    <button onclick="resumeGameBtn()">Resume</button>
+    <div class="setSection">
+      <h3>Weather</h3>
+      <div id="pauseWMode" class="segRow">
+        <button data-wmode="real">REAL</button>
+        <button data-wmode="random">DYNAMIC</button>
+        <button data-wmode="manual">MANUAL</button>
+      </div>
+      <div id="pauseWManual" class="segRow">
+        <button data-wman="clear">CLEAR</button>
+        <button data-wman="cloudy">CLOUDS</button>
+        <button data-wman="fog">FOG</button>
+        <button data-wman="rain">RAIN</button>
+        <button data-wman="storm">STORM</button>
+        <button data-wman="snow">SNOW</button>
+      </div>
+      <h3>Time of Day</h3>
+      <div id="pauseTOD" class="segRow">
+        <button data-tod="real">REAL</button>
+        <button data-tod="dawn">DAWN</button>
+        <button data-tod="noon">NOON</button>
+        <button data-tod="sunset">SUNSET</button>
+        <button data-tod="night">NIGHT</button>
+      </div>
+    </div>
+    <button id="invertBtn" onclick="toggleInvert()">Steering: Normal</button>
+    <button onclick="restartRace()">Restart</button>
+    <button onclick="backToMenu()">Quit to Menu</button>
+  </div>
+</div>
+
+<!-- Settings -->
+<div id="settingsModal">
+  <div class="panel settingsPanel">
+    <h2>SETTINGS</h2>
+
+    <div class="setSection">
+      <h3>Steering</h3>
+      <p class="setNote">Zones = tap-hold the arrows (bottom-left). Halves = the whole screen: press a side to turn that way. Tilt = turn the phone like a wheel.</p>
+      <div id="steerRow" class="segRow">
+        <button data-steer="zones">ZONES</button>
+        <button data-steer="halves">HALVES</button>
+        <button data-steer="tilt">TILT</button>
+      </div>
+    </div>
+
+    <div class="setSection">
+      <h3>Throttle</h3>
+      <p class="setNote">Auto = always on the gas, hold BRAKE to slow. Lean = tip the phone toward flat to accelerate, pull it back to brake. Pedals = full control: GAS, BRAKE &amp; DRIFT strips.</p>
+      <div id="accelRow" class="segRow">
+        <button data-accel="auto">AUTO</button>
+        <button data-accel="lean">LEAN</button>
+        <button data-accel="pedals">PEDALS</button>
+      </div>
+    </div>
+
+    <div class="setSection">
+      <h3>Soundtrack</h3>
+      <p class="setNote">My Music mutes the Valcorsa radio and steps aside so whatever you're playing — Spotify, an album, anything — keeps going. Engine and effects stay.</p>
+      <div id="musicSrcRow" class="segRow">
+        <button data-msrc="ost">VALCORSA OST</button>
+        <button data-msrc="own">MY MUSIC</button>
+      </div>
+      <p class="setNote" id="ownMusicNote" style="display:none">The radio is off. Start your own music, then come race — on some phones you may need to restart the song once after the game loads.</p>
+    </div>
+
+    <div class="setSection">
+      <h3>Sound</h3>
+      <div class="volRow"><span>Engine</span><input id="volEng" type="range" min="0" max="100" step="5"></div>
+      <div class="volRow"><span>Music</span><input id="volMus" type="range" min="0" max="100" step="5"></div>
+      <div class="volRow"><span>Effects</span><input id="volFx" type="range" min="0" max="100" step="5"></div>
+      <p class="setNote">Rumble (phone vibration — Android; iPhones don't allow it):</p>
+      <div id="hapticsRow" class="segRow">
+        <button data-h="on">ON</button>
+        <button data-h="off">OFF</button>
+      </div>
+      <p class="setNote">Music: <b>1000 Handz</b> (CC&nbsp;BY, freemusicarchive.org). SFX: Kenney.nl (CC0),
+      engine loops by qubodup (opengameart.org, public domain), Ford GT V8 by freesound_community
+      (Pixabay), tire squeal by looneybits (CC&nbsp;BY),
+      crowd by Gregor Quendel (CC&nbsp;BY). Press <b>M</b> in-game to mute.</p>
+    </div>
+
+    <div class="setSection">
+      <h3>Phone Wheel</h3>
+      <p class="setNote">Pair your phone as a steering wheel for the desktop game.</p>
+      <div class="segRow">
+        <button onclick="openPair()">PAIR PHONE</button>
+      </div>
+    </div>
+
+    <div class="setSection">
+      <h3>Graphics</h3>
+      <div id="qualityRow" class="segRow">
+        <button data-q="low">Low</button>
+        <button data-q="med">Medium</button>
+        <button data-q="high">High</button>
+        <button data-q="ultra">Ultra</button>
+      </div>
+      <p class="setNote">Motion blur <span id="blurVal"></span></p>
+      <input id="blurSlider" type="range" min="0" max="100" step="5">
+      <h3 style="margin-top:14px">Screens</h3>
+      <p class="setNote">Side screens are side windows — real extra FOV, one browser window stretched across the monitors.</p>
+      <div id="screenRow" class="segRow">
+        <button data-scr="1">1 screen</button>
+        <button data-scr="2">2 screens</button>
+        <button data-scr="3">3 screens</button>
+      </div>
+      <p class="setNote">Pillar gap (bezel) <span id="bezelVal"></span></p>
+      <input id="bezelSlider" type="range" min="0" max="10" step="0.5">
+      <div class="segRow" style="margin-top:8px">
+        <button id="swapSideBtn">SWAP 2-SCREEN SIDE</button>
+        <button id="frameBtn">COCKPIT FRAME</button>
+      </div>
+    </div>
+
+    <div class="setSection">
+      <h3>Weather</h3>
+      <div id="wModeRow" class="segRow">
+        <button data-wmode="real">REAL NH</button>
+        <button data-wmode="random">DYNAMIC</button>
+        <button data-wmode="manual">MANUAL</button>
+      </div>
+      <div id="wManualRow" class="segRow">
+        <button data-wman="clear">CLEAR</button>
+        <button data-wman="cloudy">CLOUDS</button>
+        <button data-wman="fog">FOG</button>
+        <button data-wman="rain">RAIN</button>
+        <button data-wman="storm">STORM</button>
+        <button data-wman="snow">SNOW</button>
+      </div>
+    </div>
+
+    <div class="setSection">
+      <h3>Brake</h3>
+      <p class="setNote">Where your brake input comes from (throttle stays on W / left-click / paired pedal).</p>
+      <div id="brakeRow" class="segRow">
+        <button data-brake="mouse">RIGHT-CLICK</button>
+        <button data-brake="phoneL">PHONE — LEFT</button>
+        <button data-brake="phoneR">PHONE — RIGHT</button>
+      </div>
+    </div>
+
+    <div class="setSection">
+      <h3>Pedals (dedicated devices)</h3>
+      <p class="setNote">Bind a device (e.g. a pedal-mouse) read directly — held while it's being pushed, lets off when you stop. <b>Chrome / Edge only.</b></p>
+      <div class="segRow">
+        <button id="pairPedalBtn" onclick="pairPedal()">PAIR GAS PEDAL</button>
+        <button id="pairBrakeBtn" onclick="pairBrake()">PAIR BRAKE PEDAL</button>
+      </div>
+      <span id="gasStatus" class="setNote"></span>
+      <span id="brakeStatus" class="setNote"></span>
+      <div id="pedalMon">push a paired pedal to see its live signal…</div>
+    </div>
+
+    <button class="closeSet" onclick="closeSettings()">Done</button>
+  </div>
+</div>
+
+<!-- Results -->
+<div id="results"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="importmap">
+{ "imports": { "three": "./js/vendor/three.module.min.js", "three/addons/": "./js/vendor/addons/" } }
+</script>
+<script>window.APEX_V = '20260807v17';</script>
+<script type="module" src="js/boot.js?v=20260807v17"></script>
+<script>window.resumeGameBtn = () => resumeGame();</script>
+</body>
+</html>
