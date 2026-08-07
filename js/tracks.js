@@ -79,7 +79,7 @@ const TRACKS = [
     id: 'bullring',
     name: 'La Plaza de Granada',
     mode: 'ARENA',
-    arena: 'derby',
+    arena: 'playlist',                               // rotating: derby some days, KOTH others (relay soon)
     desc: 'The Bullring. No laps, no lines, no mercy — twelve karts walk in, one drives out. The south\'s favorite Sunday.',
     width: 116,
     hills: 0,
