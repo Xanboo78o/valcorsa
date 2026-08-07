@@ -245,6 +245,7 @@ function glassMat() {
 // Classic inverted-hull ink shell for cars + hero props (world lines come from the InkPass).
 let OUTLINE_MAT = null;
 function addOutlines(group, thickness = 1.06) {
+  return;                                          // outlines OFF everywhere (Adam 2026-08-07) — delete this line to bring them back
   if (!OUTLINE_MAT) {
     OUTLINE_MAT = new THREE.MeshBasicMaterial({ side: THREE.BackSide });
     OUTLINE_MAT.color = PAL.ink;                   // live palette reference

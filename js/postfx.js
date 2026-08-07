@@ -122,7 +122,7 @@ const INK_SHADER = {
       col = mix(col, haze2, h2);
       col = mix(col, haze3, h3);
       edge *= 1.0 - (h1 + h2 + h3) * 1.35;                // lines dissolve into the haze
-      col = mix(col, inkColor, clamp(edge, 0.0, 1.0) * 0.85);
+      col = mix(col, inkColor, clamp(edge, 0.0, 1.0) * 0.0); // ink line-work OFF (Adam 2026-08-07); haze above stays
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
