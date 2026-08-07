@@ -2340,7 +2340,8 @@ function startGame(def, m) {
   // venue-forced night (The Show): dark sky, but the floods make it day-bright on track
   if (typeof DN !== 'undefined') DN.venueNight = !!def.night;
   if (def.night) {
-    const floods = new THREE.AmbientLight(0xdde9ff, 1.7);
+    // Hard league races the TRUE night: the floods go down, headlights matter
+    const floods = new THREE.AmbientLight(0xdde9ff, hardMode ? 0.3 : 1.7);
     floods.name = 'venueFloods';
     scene.add(floods);
   }
@@ -2530,6 +2531,9 @@ function renderResults() {
 function endRace() {                                    // the player's race is over -> open the live board
   if (window.NET && NET.phase === 'racing')
     NET.reportFinish(player.finishTime || raceTime, player.lap);
+  // scheduled (VD####) rooms are LEAGUE races: your full-field finish banks points
+  if (window.LEAGUE && window.NET && NET.room)
+    LEAGUE.onSoloFinish(NET.room, raceStandings().findIndex(c => c.isPlayer) + 1);
   stopVerstappenTheme();
   setMusicFinalLap(false);
   if (window.ECON && player._won == null) {             // position among finishers is locked at the line

@@ -200,8 +200,7 @@ window.NET = (() => {
     }
   }
   function onResults(payload) {
-    phase = 'lobby';
-    if (window.LEAGUE && LEAGUE.onLiveResults) LEAGUE.onLiveResults(payload.results, room);
+    phase = 'lobby';   // league scoring happens in endRace (full-field position, incl. the locals)
   }
 
   return { join, leave, makeCode, hostStart, netTick, reportFinish, roster,

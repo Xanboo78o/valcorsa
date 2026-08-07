@@ -1744,3 +1744,13 @@ body.tabsOn #shopModal .storeFront { max-height: calc(100dvh - 92px); margin-bot
   align-items: center; justify-content: center; background: rgba(4,8,20,.85); backdrop-filter: blur(6px); }
 #schedLobbyRoster { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin: 10px 0; }
 .liveChip.com { border-style: dashed; color: #8fa8e8; }
+#standingsModal { display: none; position: fixed; inset: 0; z-index: 72;
+  align-items: center; justify-content: center; background: rgba(4,8,20,.85); backdrop-filter: blur(5px); }
+#standingsBody { min-height: 80px; max-height: 50vh; overflow-y: auto; }
+#standingsBody table { width: 100%; border-collapse: collapse; background: rgba(8,14,30,.6);
+  border: 1.5px solid rgba(46,107,255,.35); }
+#standingsBody td { padding: 8px 12px; font-size: 13px; border-bottom: 1px solid rgba(46,107,255,.12);
+  text-align: left; color: var(--st-text); }
+#standingsBody td:first-child { font-family: 'Archivo Black', sans-serif; width: 34px; color: #8fa8e8; }
+#standingsBody td:nth-child(3) { color: var(--st-orange-hot); font-weight: 800; }
+#standingsBody tr.me { background: rgba(46,107,255,.22); }
