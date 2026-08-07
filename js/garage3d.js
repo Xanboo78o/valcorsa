@@ -223,13 +223,16 @@ window.GARAGE3D = (() => {
       return `<button class="gSlot ${cur ? 'filled' : ''} ${k === 'turbo' ? 'opt' : ''}" data-slot="${k}">
         <span>${k.toUpperCase()}${k === 'turbo' ? ' (optional)' : ''}</span><b>${cur ? cur.code : '— ' + need}</b></button>`;
     }).join('');
-    const ready = sel.block && sel.crank && sel.pistons && sel.cam && sel.head && sel.gasket && sel.bolts;
+    const missing = ['block', 'crank', 'pistons', 'cam', 'head', 'gasket', 'bolts'].filter(k => !sel[k]);
+    const ready = !missing.length;
     let spec = '';
     if (sel.block) {
       const partial = { block: sel.block, crank: sel.crank || sel.block, pistons: sel.pistons || sel.block,
                         cam: sel.cam || { grind: 2, brand: 'Norte Motori' }, head: sel.head || { flow: 1, brand: 'Norte Motori' }, turbo: sel.turbo };
-      const s = EM().compute(partial);
-      spec = `<div class="gSpec"><b>${s.designation}</b> · ~${s.vp} vp · ${s.mass} kg · heat ${s.heat} · rel ${s.rel}${ready ? '' : ' <i>(projected)</i>'}</div>`;
+      const s = EM().compute(Object.assign({}, partial, sel));
+      const vpTxt = s.jank ? `${s.vpLo}–${s.vpHi} vp?` : `~${s.vp} vp`;
+      spec = `<div class="gSpec"><b>${s.designation}</b> · ${vpTxt} · ${s.mass} kg · heat ${s.heat} · rel ${s.rel}${ready ? '' : ' <i>(projected)</i>'}</div>` +
+        (s.jank ? `<div class="gSpec" style="opacity:.75">🔧 jank ${s.jank}: ${s.jankNotes.join(', ')} — the dyno decides at the stamp</div>` : '');
     }
     const nothingStaged = !armful.length && bins.every(b => !b);
     pan.innerHTML = `<h3>WORKBENCH</h3>
@@ -237,8 +240,8 @@ window.GARAGE3D = (() => {
       ${nothingStaged ? `<button id="gGoShelf" class="gAction">BINS ARE EMPTY — GRAB PARTS AT THE SHELF</button>` : ''}
       ${armful.length ? `<button id="gLoad" class="gAction">LOAD BINS (${armfulN()} in the armful)</button>` : ''}
       <div class="gSlots">${slotHtml}</div>${spec}
-      ${ready ? `<input id="gEngName" maxlength="16" placeholder="Name this engine…" autocomplete="off">
-                 <button id="gStamp" class="gAction hero">BUILD &amp; STAMP</button>` : ''}`;
+      <input id="gEngName" maxlength="16" placeholder="Name this engine…" autocomplete="off" ${ready ? '' : 'style="display:none"'}>
+      <button id="gStamp" class="gAction hero" ${ready ? '' : 'disabled'}>${ready ? 'BUILD &amp; STAMP' : 'NEEDS: ' + missing.map(m => m.toUpperCase()).join(' · ')}</button>`;
     pan.classList.add('open');
 
     if ($('gLoad')) $('gLoad').onclick = loadBins;
@@ -257,19 +260,31 @@ window.GARAGE3D = (() => {
       }
       if (s.n <= 0) armful.splice(armful.indexOf(s), 1);
     }
-    if (armful.length && window.toast) toast('bins are full — some stays in your arms');
+    if (armful.length) say('bins are full — some stays in your arms');
     renderArmful(); renderBench();
+  }
+
+  // feedback INSIDE the garage — window.toast hides behind this overlay (Adam: "it does nothing")
+  function say(msg, bad) {
+    let t = $('gToast');
+    if (!t) { t = document.createElement('div'); t.id = 'gToast'; root.appendChild(t); }
+    t.textContent = msg;
+    t.className = bad ? 'bad' : '';
+    t.style.display = 'block';
+    clearTimeout(say._t);
+    say._t = setTimeout(() => { t.style.display = 'none'; }, 2600);
   }
 
   function fillSlot(kind) {
     if (sel[kind]) { delete sel[kind]; if (kind === 'block') sel = {}; renderBench(); return; }   // tap filled = take off
     const b = stackOf(kind);
-    if (!b) { if (window.toast) toast('no ' + (kindLabel[kind] || kind).toLowerCase() + ' in the bins — go grab some'); return; }
+    if (!b) { say('no ' + (kindLabel[kind] || kind).toLowerCase() + ' in the bins — grab some at the shelf', true); return; }
     const p = EM().atoms.find(x => x.id === b.id);
-    const err = EM().fitError(kind, p, sel);
-    if (err) { if (window.toast) toast(err); if (navigator.vibrate) navigator.vibrate([30, 40, 30]); return; }
+    const chk = EM().fitCheck(kind, p, sel);
+    if (chk && chk.block) { say(chk.block, true); if (navigator.vibrate) navigator.vibrate([30, 40, 30]); return; }
     sel[kind] = p;
-    if (navigator.vibrate) navigator.vibrate(12);
+    if (chk && chk.jank) { say('🔧 ' + chk.msg); if (navigator.vibrate) navigator.vibrate([12, 30, 24]); }
+    else if (navigator.vibrate) navigator.vibrate(12);
     renderBench();
   }
 
@@ -282,6 +297,7 @@ window.GARAGE3D = (() => {
   function stamp() {
     const name = ($('gEngName').value || '').trim() || 'UNNAMED';
     const s = EM().compute(sel);
+    s.vp = EM().dynoRoll(s);                  // janky builds meet their truth on the dyno
     const my = inv();
     for (const k of ['block', 'crank', 'pistons', 'cam', 'head', 'gasket', 'bolts']) {
       my[sel[k].id] = Math.max(0, (my[sel[k].id] || 0) - 1); takeFromBin(sel[k].id, 1);
@@ -294,9 +310,12 @@ window.GARAGE3D = (() => {
                   builder: racer, season: 1,
                   parts: ['block', 'crank', 'pistons', 'cam', 'head', 'turbo'].filter(k => sel[k]).map(k => sel[k].code) });
     EM().saveBuilds(builds);
+    const wasJanky = s.jank > 0;
     sel = {};
-    if (window.toast) toast('🔧 "' + name.toUpperCase() + '" · ' + s.designation + ' · ' + s.vp + ' vp — stamped & signed');
-    if (navigator.vibrate) navigator.vibrate([20, 30, 20, 30, 60]);
+    say(wasJanky
+      ? '🎲 THE DYNO SAYS: ' + s.vp + ' vp — "' + name.toUpperCase() + '" · ' + s.designation + ' stamped'
+      : '🔧 "' + name.toUpperCase() + '" · ' + s.designation + ' · ' + s.vp + ' vp — stamped & signed');
+    if (navigator.vibrate) navigator.vibrate(wasJanky ? [20, 40, 20, 40, 120] : [20, 30, 20, 30, 60]);
     renderBench();
   }
 
@@ -312,6 +331,15 @@ window.GARAGE3D = (() => {
         `<button data-st="${k}" class="${k === 'door' ? 'on' : ''}">${s.label}</button>`).join('')}</div>
       <div id="gArmful"></div>
       <div id="gStationPanel"></div>`;
+    const css = document.createElement('style');
+    css.textContent = `
+      #gToast { display:none; position:absolute; top:56px; left:50%; transform:translateX(-50%);
+        z-index:20; background:rgba(10,17,40,.95); border:1.5px solid #2e6bff; color:#eef3ff;
+        border-radius:10px; padding:10px 18px; font-size:14px; font-weight:700; max-width:86%;
+        text-align:center; pointer-events:none; }
+      #gToast.bad { border-color:#ff8c1a; color:#ffd9a8; }
+      #engGarage .gSlot, #engGarage .gGrab, #engGarage .gAction { min-height: 42px; }`;
+    root.appendChild(css);
     $('garageModal').appendChild(root);
     root.querySelector('#gExit').onclick = close;
     root.querySelectorAll('#gStationBar button').forEach(b => b.onclick = () => goTo(b.dataset.st));

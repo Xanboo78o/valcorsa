@@ -94,6 +94,31 @@ window.ENGINEMATH = (() => {
   // ---- the honest math (simplified, learnable, predictable) ----
   const CAM_MUL = [0, 0.92, 1.0, 1.12, 1.22];              // by grind
   const TURBO_MUL = [1, 1.25, 1.4, 1.55, 1.75];            // by class (0 = none)
+
+  // ---- JANK (Adam's law, 2026-08-07): mismatches are never impossible — they're
+  // JANKY. Every size step of mismatch adds jank. Jank drags the average down but
+  // widens the spread: a janky build is usually worse, occasionally MAGIC.
+  const SZ = { S: 0, M: 1, L: 2 };
+  function jankOf(sel) {
+    const b = sel.block;
+    if (!b) return { j: 0, notes: [] };
+    let j = 0; const notes = [];
+    const dz = p => Math.abs((SZ[p.size] ?? 1) - SZ[b.size]);
+    if (sel.crank) { const d = dz(sel.crank); if (d) { j += d; notes.push('crank shimmed'); } }
+    if (sel.pistons) {
+      const d = dz(sel.pistons) + Math.min(2, Math.abs((sel.pistons.cyl ?? b.cyl) - b.cyl) * 0.5);
+      if (d) { j += d; notes.push('pistons persuaded'); }
+    }
+    if (sel.cam) { const d = dz(sel.cam); if (d) { j += d; notes.push('cam bushed'); } }
+    if (sel.head) { const d = dz(sel.head); if (d) { j += d; notes.push('deck gap'); } }
+    if (sel.gasket) { const d = dz(sel.gasket) * 0.5; if (d) { j += d; notes.push('gasket stretched'); } }
+    if (sel.turbo && sel.head) {
+      const fd = Math.abs((SZ[sel.turbo.flange] ?? 1) - (SZ[sel.head.flange] ?? 1));
+      if (fd) { j += fd; notes.push('flange adapted'); }
+    }
+    return { j: +j.toFixed(1), notes };
+  }
+
   function compute(sel) {   // sel = {block, crank, pistons, cam, head, turbo?} — atom objects
     const { block, crank, pistons, cam, head, turbo } = sel;
     let quality = q(block) * q(crank) * q(pistons) * q(cam) * q(head) * (turbo ? q(turbo) : 1);
@@ -102,27 +127,39 @@ window.ENGINEMATH = (() => {
     const vp = Math.round(block.cc * 0.055 * CAM_MUL[cam.grind] * (1 + head.flow * 0.05)
                           * TURBO_MUL[turbo ? turbo.cls : 0] * quality);
     const mass = Math.round(block.cc * 0.034 + 14 + (turbo ? 8 + turbo.cls * 4 : 0));
-    const heat = +(2 + (turbo ? turbo.cls * 1.5 : 0) + (cam.grind === 4 ? 1.6 : 0) + block.cc / 1500).toFixed(1);
+    const { j, notes } = jankOf(sel);
+    const heat = +(2 + (turbo ? turbo.cls * 1.5 : 0) + (cam.grind === 4 ? 1.6 : 0) + block.cc / 1500 + j * 0.6).toFixed(1);
     const rel = Math.max(1, Math.min(10, Math.round(9 - Math.max(0, cam.grind - 2) * 1.2
-                          - (turbo ? turbo.cls * 0.5 : 0) + (crank.forged ? 0.7 : 0) + (pistons.forged ? 0.7 : 0))));
-    const designation = block.size + Math.round(block.cc / 100) + (turbo ? 'T' : '');
-    return { vp, mass, heat, rel, designation };
+                          - (turbo ? turbo.cls * 0.5 : 0) + (crank.forged ? 0.7 : 0) + (pistons.forged ? 0.7 : 0) - j)));
+    const designation = block.size + Math.round(block.cc / 100) + (turbo ? 'T' : '') + (j > 0 ? '~' : '');
+    if (j <= 0) return { vp, mass, heat, rel, designation, jank: 0, jankNotes: [] };
+    // the janky window: mostly worse, sometimes better than a perfect build
+    const vpLo = Math.round(vp * Math.max(0.55, 1 - j * 0.09));
+    const vpHi = Math.round(vp * (1 + j * 0.13 + 0.02));
+    return { vp, vpLo, vpHi, mass, heat, rel, designation, jank: j, jankNotes: notes };
+  }
+  // the DYNO ROLL: a janky build's true number isn't known until it's stamped
+  function dynoRoll(s) {
+    if (!s.jank) return s.vp;
+    return s.vpLo + Math.round(Math.random() * (s.vpHi - s.vpLo));
   }
 
-  // fitment: size is LAW. Returns null if it fits, else the complaint.
-  function fitError(kind, part, sel) {
+  // fitment: only the physically impossible is refused. Everything else fits — with jank.
+  // Returns { block: 'msg' } for a hard stop, { jank, msg } for a janky fit, or null (clean).
+  function fitCheck(kind, part, sel) {
     const b = sel.block;
-    if (kind !== 'block' && !b) return 'the block goes on first';
-    if (kind === 'crank'   && part.size !== b.size) return part.code + ' will not seat in an ' + b.size + ' block';
-    if (kind === 'pistons' && (part.size !== b.size || part.cyl !== b.cyl)) return b.code + ' needs a ' + b.size + '-set of ' + b.cyl;
-    if (kind === 'cam'     && part.size !== b.size) return 'cam journals are ' + part.size + ' — block is ' + b.size;
-    if (kind === 'head'    && part.size !== b.size) return part.code + ' does not cover an ' + b.size + ' deck';
-    if (kind === 'gasket'  && part.size !== b.size) return 'wrong gasket — needs HG-' + b.size;
-    if (kind === 'turbo') {
-      if (!sel.head) return 'no head, nowhere to bolt a turbo';
-      if (part.flange !== sel.head.flange) return part.code + ' flange is ' + part.flange + ' — head takes ' + sel.head.flange;
-    }
+    if (kind !== 'block' && !b) return { block: 'the block goes on first' };
+    if (kind === 'turbo' && !sel.head) return { block: 'no head, nowhere to bolt a turbo' };
+    const trial = Object.assign({}, sel, { [kind]: part });
+    const before = jankOf(sel).j, after = jankOf(trial).j;
+    const d = +(after - before).toFixed(1);
+    if (d > 0) return { jank: d, msg: part.code + ' seats… with persuasion (+' + d + ' jank)' };
     return null;
+  }
+  // legacy name kept so nothing else breaks: hard stops only
+  function fitError(kind, part, sel) {
+    const c = fitCheck(kind, part, sel);
+    return c && c.block ? c.block : null;
   }
 
   // ---- builds ----
@@ -157,6 +194,6 @@ window.ENGINEMATH = (() => {
   }
   migrate();
 
-  return { atoms, compute, fitError, builds, saveBuilds,
+  return { atoms, compute, fitError, fitCheck, dynoRoll, jankOf, builds, saveBuilds,
            binCap: p => p.fam === 'Consumables' ? 24 : p.size === 'L' ? 1 : p.size === 'M' ? 4 : 8 };
 })();
