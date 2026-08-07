@@ -72,6 +72,7 @@
     eng0: 'sfx/eng0.wav', eng1: 'sfx/eng1.wav', eng2: 'sfx/eng2.wav',
     eng3: 'sfx/eng3.wav', eng4: 'sfx/eng4.wav', eng5: 'sfx/eng5.wav',
     gtidle: 'sfx/gtidle.wav', gtlow: 'sfx/gtlow.wav', gtmid: 'sfx/gtmid.wav', gtpull: 'sfx/gtpull.wav',
+    vmidle: 'sfx/vmidle.wav', vmlow: 'sfx/vmlow.wav', vmmid: 'sfx/vmmid.wav', vmpull: 'sfx/vmpull.wav',
     squeal: 'sfx/squeal.wav',
     crash0: 'sfx/crash0.mp3', crash1: 'sfx/crash1.mp3', crash2: 'sfx/crash2.mp3',
     thump0: 'sfx/thump0.mp3', thump1: 'sfx/thump1.mp3',
@@ -166,6 +167,24 @@
     { s: 'gtmid',  f0: 213.0 },    // high hold (rate-stretched up to redline)
   ];
   const PULL_F0 = 123.9;           // the full-throttle roar pull
+  // THE VOCALMOTOR: Adam's recorded voice as the engine bank. f0s get measured
+  // from the actual recordings at processing time — until then (or if a sample
+  // 404s) vmReady() is false and the sealed unit falls back to the GT bank.
+  const VM_ID = 'engine-xanboo78motorcorps-the-vocalmotor';
+  const VMBANK = [
+    { s: 'vmidle', f0: 0 },        // mouth idle putter
+    { s: 'vmlow',  f0: 0 },        // cruise brmm hold
+    { s: 'vmmid',  f0: 0 },        // working-hard hold
+  ];
+  let VM_PULL_F0 = 0;              // the full-send scream
+  const vmReady = () => !!(S.vmidle && S.vmlow && S.vmmid && S.vmpull &&
+                           VMBANK.every(b => b.f0 > 0) && VM_PULL_F0 > 0);
+  let _vw = false, _vwT = -9e9;   // 1Hz poll — activeEngine() JSON-parses the livery, too hot for every audio frame
+  const vocalWanted = () => {
+    const t = performance.now();
+    if (t - _vwT > 1000) { _vwT = t; _vw = !!(window.ECON && ECON.activeEngine && ECON.activeEngine() === VM_ID); }
+    return _vw;
+  };
   const LEGACY = { f1: 'formula', rally: 'rally', kart: 'kart', bike: 'bike', monster: 'truck' };
   function chassisOf(car) {
     if (!car) return 'gt';
@@ -206,13 +225,16 @@
       src.connect(gg); gg.connect(drive); src.start();
       return { src, g: gg };
     };
-    const bands = BANK.map(b => Object.assign({ f0: b.f0 }, mkLoop(S[b.s])));
-    const pull = mkLoop(S.gtpull);
+    const vocal = vocalWanted() && vmReady();       // THE VOCALMOTOR: swap the whole bank for Adam's voice
+    if (vocal) lp.frequency.value = Math.max(V.bright, 3400);   // a voice needs its consonants
+    const bands = (vocal ? VMBANK : BANK).map(b => Object.assign({ f0: b.f0 }, mkLoop(S[b.s])));
+    const pull = mkLoop(S[vocal ? 'vmpull' : 'gtpull']);
     const subO = ctx.createOscillator(); subO.type = 'sawtooth'; subO.frequency.value = 40;
     const subG = ctx.createGain(); subG.gain.value = 0;
     subO.connect(subG); subG.connect(drive);
     subO.start();
-    Object.assign(PE, { built: true, chassis, V, drive, lp, shelf, g, bands,
+    Object.assign(PE, { built: true, chassis, V, drive, lp, shelf, g, bands, vocal,
+      pullF0: vocal ? VM_PULL_F0 : PULL_F0,
       hasBank: !!(S.gtidle && S.gtlow && S.gtmid && S.gtpull),
       pullSrc: pull.src, pullG: pull.g, subO, subG });
   }
@@ -220,7 +242,9 @@
   function updatePlayerEngine(dt, active, speed, thr, cockpit) {
     const ch = chassisOf(player);
     const bankUp = !!(S.gtidle && S.gtlow && S.gtmid && S.gtpull);
-    if (!PE.built || PE.chassis !== ch || (bankUp && !PE.hasBank)) buildPlayerEngine(ch);  // samples can decode late
+    const wantVocal = vocalWanted() && vmReady();
+    if (!PE.built || PE.chassis !== ch || (bankUp && !PE.hasBank) || PE.vocal !== wantVocal)
+      buildPlayerEngine(ch);  // samples can decode late; the Vocalmotor can be bolted on between races
     const V = PE.V;
     let rpm = player.rpm || clamp(0.06 + speed / 130, 0.06, 1);
     if (state === 'countdown') rpm = Math.max(rpm, thr * 0.6);      // grid rev-up: blip it
@@ -234,7 +258,7 @@
     // full-load pull: the roar comes in with your right foot, band mix ducks to make room
     const load = thr * (0.45 + rpm * 0.55) * (player.boostT > 0 ? 1.15 : 1);
     const pullTaper = F0 > 280 ? 0.45 : 1;          // top end: the stretched mid carries the scream
-    setT(PE.pullSrc.playbackRate, clamp(F / PULL_F0, 0.5, 3.0), 0.03);
+    setT(PE.pullSrc.playbackRate, clamp(F / (PE.pullF0 || PULL_F0), 0.5, 3.0), 0.03);
     setT(PE.pullG.gain, load * pullTaper * 0.95, 0.05);
     // bank crossfade: tent weights in log-frequency, equal-power shaped
     const lf = Math.log(F0), bandMix = (1 - load * 0.35) * 0.85;

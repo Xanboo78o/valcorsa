@@ -32,9 +32,30 @@ window.GARAGE3D = (() => {
   // tires, a listing stance, smoke stains. Orbit it, grab parts, SHAKE them — loose
   // things rattle and the garage tells you what your hands found.
   let liftCar = null, liftSmoke = [], found = new Set();
-  const wearGet = () => JSON.parse(localStorage.getItem('vc_wear') || '{"tire":0,"engine":1,"flat":false}');
-  const wearSet = w => localStorage.setItem('vc_wear', JSON.stringify(w));
-  // wear accrues at every race end (4th wrap in the endRace chain — they compose)
+  let liftKartId = null;                       // which kart is ON the lift (you choose now)
+  // wear is PER KART — your daily doesn't inherit the rally car's sins
+  const wearAll = () => JSON.parse(localStorage.getItem('vc_wear2') || '{}');
+  const FRESH = { tire: 0, engine: 1, flat: false };
+  function wearGet(id) {
+    const all = wearAll();
+    return Object.assign({}, FRESH, all[id || liftKartId] || {});
+  }
+  function wearSet(w, id) {
+    const all = wearAll();
+    all[id || liftKartId] = w;
+    localStorage.setItem('vc_wear2', JSON.stringify(all));
+  }
+  // migrate the old global wear onto the active kart, once
+  (() => {
+    const old = localStorage.getItem('vc_wear');
+    if (!old) return;
+    try {
+      const act = localStorage.getItem('vc_activeKart');
+      if (act) { const all = wearAll(); all[act] = JSON.parse(old); localStorage.setItem('vc_wear2', JSON.stringify(all)); }
+    } catch (e) {}
+    localStorage.removeItem('vc_wear');
+  })();
+  // wear accrues at every race end — onto the kart that RACED (the active one)
   const _origEnd = window.endRace;
   if (_origEnd && !_origEnd._lift) {
     window.endRace = function () {
@@ -42,11 +63,13 @@ window.GARAGE3D = (() => {
       try {
         const d = (typeof player !== 'undefined' && player && player.dmg) || null;
         if (!d) return;
-        const w = wearGet();
+        const act = localStorage.getItem('vc_activeKart');
+        if (!act) return;
+        const w = wearGet(act);
         w.tire = Math.min(1, +(w.tire + (d.wear || 0) * 0.55).toFixed(3));
         w.engine = Math.max(0.25, +Math.min(w.engine, 0.35 + (d.engine ?? 1) * 0.65).toFixed(3));
         if (d.flat) w.flat = true;
-        wearSet(w);
+        wearSet(w, act);
       } catch (e) {}
     };
     window.endRace._lift = true;
@@ -56,15 +79,17 @@ window.GARAGE3D = (() => {
     if (liftCar) { scene.remove(liftCar); liftCar = null; }
     for (const s of liftSmoke) scene.remove(s.m);
     liftSmoke = [];
+    closeHood();
     let kit = null;
     try {
       const liv = JSON.parse(localStorage.getItem('vc_livery') || '[]');
-      kit = liv.find(k => k.id === localStorage.getItem('vc_activeKart')) || liv[0] || null;
+      kit = liv.find(k => k.id === liftKartId) || liv.find(k => k.id === localStorage.getItem('vc_activeKart')) || liv[0] || null;
+      if (kit) liftKartId = kit.id;
     } catch (e) {}
     const carKit = kit ? { chassis: kit.chassis || 'gt', paint: kit.paint || 0, wheels: kit.wheels || 0, decal: kit.decal || 'none' }
                        : { chassis: 'gt', paint: 0, wheels: 0, decal: 'none' };
     liftCar = buildCarMesh(0xcccccc, 0x14274a, carKit);
-    liftCar.position.set(-3.1, 0.62, 2.2);
+    liftCar.position.set(-3.1, 1.52, 2.2);               // riding high — walk under her
     liftCar.rotation.y = 0.5;
     liftCar.userData.kitName = kit ? (kit.name || 'YOUR KART') : 'YOUR KART';
     scene.add(liftCar);
@@ -131,13 +156,13 @@ window.GARAGE3D = (() => {
 
   // orbit-inspect controls while at the lift
   const orbit = { on: false, th: 2.6, ph: 1.05, r: 5.6, drag: null, moved: 0 };
-  function orbitCam() {
-    const c = liftCar ? liftCar.position : new THREE.Vector3(-3.1, 0.8, 2.2);
-    const y = Math.max(0.4, Math.cos(orbit.ph)) * orbit.r;
-    camera.position.set(c.x + Math.sin(orbit.th) * Math.sin(orbit.ph) * orbit.r,
-                        c.y + y * 0.55 + 0.4,
-                        c.z + Math.cos(orbit.th) * Math.sin(orbit.ph) * orbit.r);
-    camera.userData.look.set(c.x, c.y + 0.35, c.z);
+  function orbitCam() {                        // the FULL sphere — she's on a lift, get under her
+    const c = liftCar ? liftCar.position : new THREE.Vector3(-3.1, 1.5, 2.2);
+    const px = c.x + Math.sin(orbit.th) * Math.sin(orbit.ph) * orbit.r;
+    const py = Math.max(0.18, c.y + 0.35 + Math.cos(orbit.ph) * orbit.r);   // never through the floor
+    const pz = c.z + Math.cos(orbit.th) * Math.sin(orbit.ph) * orbit.r;
+    camera.position.set(px, py, pz);
+    camera.userData.look.set(c.x, c.y + 0.3, c.z);
     camera.lookAt(camera.userData.look);
   }
   function renderLift() {
@@ -178,8 +203,13 @@ window.GARAGE3D = (() => {
         ${fits ? `<button class="gGrab" data-install="${b.id}">WRENCH IN</button>`
                : `<button class="gGrab" data-nofit="${b.id}">WON'T FIT</button>`}</div>`;
     }).join('');
+    const liv = JSON.parse(localStorage.getItem('vc_livery') || '[]');
+    const picker = liv.length > 1 ? '<div class="gBins">' + liv.map(k =>
+      `<button class="gGrab" data-pick="${k.id}" ${k.id === liftKartId ? 'disabled' : ''}>${(k.name || 'kart').toUpperCase()}</button>`).join('') + '</div>' : '';
     pan.innerHTML = `<h3>THE LIFT · ${liftCar ? liftCar.userData.kitName.toUpperCase() : ''}</h3>
-      <p class="gKind">DRAG TO ORBIT · PINCH/SCROLL TO ZOOM · TAP A PART TO SHAKE IT</p>
+      ${picker}
+      <p class="gKind">DRAG TO ORBIT (FULL SPHERE) · PINCH/SCROLL TO ZOOM · TAP A PART TO SHAKE IT</p>
+      <button class="gAction" id="gHood">${hoodGroup ? 'CLOSE THE HOOD' : '🔧 POP THE HOOD'}</button>
       ${clean ? '<p class="gEmpty">she’s clean. go put some laps on her.</p>'
         : jobs.length ? '<p class="gKind">THE JOB SHEET</p>' + jobs.join('')
         : '<p class="gEmpty">something’s off with this kart… get your hands on it and find it.</p>'}
@@ -194,6 +224,15 @@ window.GARAGE3D = (() => {
     pan.querySelectorAll('[data-nofit]').forEach(b => b.onclick = () =>
       say(bay.assist ? 'no room — pull the drift assist and it fits' : 'no room in this chassis. bigger kart, smaller engine.', true));
     pan.querySelectorAll('[data-assist]').forEach(b => b.onclick = () => wrench('assist', {}));
+    pan.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+      liftKartId = b.dataset.pick;
+      found = new Set();
+      buildLiftCar();
+      renderLift();
+      say('🛗 ' + (liftCar ? liftCar.userData.kitName.toUpperCase() : 'kart') + ' on the lift');
+    });
+    const hd = $('gHood');
+    if (hd) hd.onclick = () => { hoodGroup ? closeHood() : openHood(); renderLift(); };
   }
 
   // ---------------- THE WRENCH (slice 2): drag round and round until it slows
@@ -497,12 +536,11 @@ window.GARAGE3D = (() => {
     // pegboard behind the bench
     put(box(4.6, 2.0, 0.08, 0x1c2740), 0, 2.6, -5.9);
 
-    // THE LIFT (left-front): two rails on posts, your kart on top
+    // THE LIFT (left-front): a REAL two-post lift — the car rides high, you walk under
     for (const dx of [-0.55, 0.55]) {
-      put(box(0.28, 0.5, 3.4, 0xb8452a), -3.1 + dx, 0.35, 2.2, 0.5);         // rails
+      put(box(0.28, 0.34, 3.4, 0xb8452a), -3.1 + dx, 1.32, 2.2, 0.5);        // rails, raised
       for (const dz of [-1.2, 1.2])
-        put(box(0.16, 0.42, 0.16, 0x3a3f4a),
-            -3.1 + dx * Math.cos(0.5) - dz * Math.sin(0.5) * 0, 0.18, 2.2 + dz, 0);  // posts (chunky toy lift)
+        put(box(0.18, 1.5, 0.18, 0x3a3f4a), -3.1 + dx, 0.75, 2.2 + dz, 0);   // tall posts
     }
     put(box(0.9, 0.1, 0.5, 0x2a3140), -1.6, 0.3, 3.8);                       // control pedestal
     put(box(0.5, 0.5, 0.08, 0xff8c1a, 0x331a00), -1.6, 0.75, 3.8);           // UP/DOWN panel
@@ -511,12 +549,13 @@ window.GARAGE3D = (() => {
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     root.insertBefore(renderer.domElement, root.firstChild);
 
-    renderer.domElement.addEventListener('pointerdown', onTap);
-    renderer.domElement.addEventListener('pointerdown', liftDown);
-    renderer.domElement.addEventListener('pointermove', liftMove);
-    renderer.domElement.addEventListener('pointerup', liftUp);
-    renderer.domElement.addEventListener('wheel', liftWheel, { passive: false });
-    renderer.domElement.addEventListener('touchmove', liftTouch, { passive: false });
+    renderer.domElement.addEventListener('pointerdown', ptrDown);
+    renderer.domElement.addEventListener('pointermove', ptrMove);
+    renderer.domElement.addEventListener('pointerup', ptrUp);
+    renderer.domElement.addEventListener('wheel', ptrWheel, { passive: false });
+    renderer.domElement.addEventListener('touchmove', ptrTouch, { passive: false });
+    addEventListener('keydown', keyDown);
+    addEventListener('keyup', keyUp);
     renderer.domElement.addEventListener('touchend', () => { pinch0 = 0; });
     const st = STATIONS.door;
     camera.position.set(...st.pos);
@@ -546,40 +585,129 @@ window.GARAGE3D = (() => {
     else if (p.x > -2.2 && p.x < -1 && p.z > 3.2) goTo('office');   // the pedestal
     else if (p.x < -1 && p.z > 0.5) goTo('lift');
   }
-  // lift-mode input: drag orbits, pinch/wheel zooms, a still tap shakes the part under it
-  function liftDown(e) {
-    if (curStation !== 'lift') return;
-    orbit.drag = { x: e.clientX, y: e.clientY }; orbit.moved = 0;
+  // ---- WALK MODE: the garage is a place you're IN. Left thumb (or WASD) walks,
+  // right thumb (or mouse drag) looks. At the lift you're in ORBIT: full sphere.
+  const walk = { yaw: Math.PI, pitch: -0.08, x: 0, z: 7.6, joy: null, look: null, keys: {} };
+  const mode = () => curStation === 'lift' ? 'orbit' : 'walk';
+
+  function ptrDown(e) {
+    const half = renderer.domElement.getBoundingClientRect().width * 0.42;
+    if (mode() === 'orbit') { orbit.drag = { x: e.clientX, y: e.clientY }; orbit.moved = 0; return; }
+    const isTouch = e.pointerType === 'touch';
+    if (isTouch && e.clientX < half && !walk.joy) walk.joy = { id: e.pointerId, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 };
+    else if (!walk.look) walk.look = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };
   }
-  function liftMove(e) {
-    if (curStation !== 'lift' || !orbit.drag) return;
-    const dx = e.clientX - orbit.drag.x, dy = e.clientY - orbit.drag.y;
-    orbit.moved += Math.abs(dx) + Math.abs(dy);
-    orbit.th -= dx * 0.008;
-    orbit.ph = Math.max(0.5, Math.min(1.45, orbit.ph - dy * 0.005));
-    orbit.drag = { x: e.clientX, y: e.clientY };
+  function ptrMove(e) {
+    if (mode() === 'orbit') {
+      if (!orbit.drag) return;
+      const dx = e.clientX - orbit.drag.x, dy = e.clientY - orbit.drag.y;
+      orbit.moved += Math.abs(dx) + Math.abs(dy);
+      orbit.th -= dx * 0.008;
+      orbit.ph = Math.max(0.12, Math.min(2.85, orbit.ph + dy * 0.006));   // the FULL sphere
+      orbit.drag = { x: e.clientX, y: e.clientY };
+      return;
+    }
+    if (walk.joy && e.pointerId === walk.joy.id) {
+      walk.joy.dx = Math.max(-1, Math.min(1, (e.clientX - walk.joy.x0) / 60));
+      walk.joy.dy = Math.max(-1, Math.min(1, (e.clientY - walk.joy.y0) / 60));
+      const nub = $('gJoyNub');
+      if (nub) nub.style.transform = `translate(${walk.joy.dx * 26}px, ${walk.joy.dy * 26}px)`;
+    } else if (walk.look && e.pointerId === walk.look.id) {
+      const dx = e.clientX - walk.look.x, dy = e.clientY - walk.look.y;
+      walk.look.moved += Math.abs(dx) + Math.abs(dy);
+      walk.yaw -= dx * 0.006;
+      walk.pitch = Math.max(-0.9, Math.min(0.7, walk.pitch - dy * 0.004));
+      walk.look.x = e.clientX; walk.look.y = e.clientY;
+    }
   }
-  function liftUp(e) {
-    if (curStation !== 'lift' || !orbit.drag) return;
-    const still = orbit.moved < 8;
-    orbit.drag = null;
-    if (!still || !liftCar) return;
-    castAt(e);
-    const hit = ray.intersectObjects(liftCar.children, true)[0];
-    if (hit) shakePart(hit.object);
+  function ptrUp(e) {
+    if (mode() === 'orbit') {
+      if (!orbit.drag) return;
+      const still = orbit.moved < 8;
+      orbit.drag = null;
+      if (!still || !liftCar) return;
+      castAt(e);
+      const hit = ray.intersectObjects(liftCar.children, true)[0];
+      if (hit) shakePart(hit.object);
+      return;
+    }
+    if (walk.joy && e.pointerId === walk.joy.id) {
+      walk.joy = null;
+      const nub = $('gJoyNub'); if (nub) nub.style.transform = '';
+    } else if (walk.look && e.pointerId === walk.look.id) {
+      const still = walk.look.moved < 8;
+      walk.look = null;
+      if (still) onTap(e);                    // a still tap = interact with what you see
+    }
   }
-  function liftWheel(e) {
-    if (curStation !== 'lift') return;
+  function ptrWheel(e) {
+    if (mode() !== 'orbit') return;
     e.preventDefault();
-    orbit.r = Math.max(2.4, Math.min(7.5, orbit.r + e.deltaY * 0.01));
+    orbit.r = Math.max(2.0, Math.min(8.5, orbit.r + e.deltaY * 0.01));
   }
   let pinch0 = 0;
-  function liftTouch(e) {
-    if (curStation !== 'lift' || e.touches.length !== 2) return;
+  function ptrTouch(e) {
+    if (mode() !== 'orbit' || e.touches.length !== 2) return;
     const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-    if (pinch0) orbit.r = Math.max(2.4, Math.min(7.5, orbit.r * (pinch0 / d)));
+    if (pinch0) orbit.r = Math.max(2.0, Math.min(8.5, orbit.r * (pinch0 / d)));
     pinch0 = d;
     e.preventDefault();
+  }
+  function keyDown(e) { walk.keys[e.key.toLowerCase()] = true; }
+  function keyUp(e) { walk.keys[e.key.toLowerCase()] = false; }
+  function walkStep() {                        // called from loop()
+    if (mode() !== 'walk' || tween) return;
+    let mx = 0, mz = 0;
+    if (walk.joy) { mx = walk.joy.dx; mz = -walk.joy.dy; }
+    if (walk.keys.w || walk.keys.arrowup) mz = 1;
+    if (walk.keys.s || walk.keys.arrowdown) mz = -1;
+    if (walk.keys.a || walk.keys.arrowleft) mx = -1;
+    if (walk.keys.d || walk.keys.arrowright) mx = 1;
+    if (mx || mz) {
+      const sp = 0.075;
+      walk.x += (Math.sin(walk.yaw) * mz + Math.sin(walk.yaw + Math.PI / 2) * mx) * sp;
+      walk.z += (Math.cos(walk.yaw) * mz + Math.cos(walk.yaw + Math.PI / 2) * mx) * sp;
+      walk.x = Math.max(-7.3, Math.min(7.3, walk.x));
+      walk.z = Math.max(-5.3, Math.min(7.9, walk.z));
+      const pan = $('gStationPanel');          // walking away closes the paperwork
+      if (pan && pan.classList.contains('open') && (mx || mz)) pan.classList.remove('open');
+    }
+    camera.position.set(walk.x, 1.68, walk.z);
+    camera.userData.look.set(
+      walk.x + Math.sin(walk.yaw) * Math.cos(walk.pitch),
+      1.68 + Math.sin(walk.pitch),
+      walk.z + Math.cos(walk.yaw) * Math.cos(walk.pitch));
+    camera.lookAt(camera.userData.look);
+  }
+
+  // ---- POP THE HOOD: the bay becomes visible — holographic volumes over the car
+  let hoodGroup = null;
+  function openHood() {
+    closeHood();
+    if (!liftCar) return;
+    const bay = bayState();
+    hoodGroup = new THREE.Group();
+    const holo = (w, h, d, c, o2) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+      new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: o2, depthWrite: false }));
+    const outline = holo(1.9, 0.85, 1.5, 0x2e6bff, 0.10);
+    outline.add(new THREE.LineSegments(new THREE.EdgesGeometry(outline.geometry),
+      new THREE.LineBasicMaterial({ color: 0x4d86ff })));
+    hoodGroup.add(outline);
+    const engFrac = bay.engV / bay.cap, asFrac = ASSIST_VOL / bay.cap;
+    const eng = holo(1.9 * engFrac * 2.2, 0.7, 1.3, 0x5ee23b, 0.3);
+    eng.position.x = -0.9 + 1.9 * engFrac;
+    hoodGroup.add(eng);
+    if (bay.assist) {
+      const as = holo(1.9 * asFrac * 2.2, 0.5, 1.0, 0xff8c1a, 0.35);
+      as.position.x = 0.9 - 1.9 * asFrac;
+      hoodGroup.add(as);
+    }
+    hoodGroup.position.set(0, 1.35, 0.9);      // floats over the bay, hood "open"
+    liftCar.add(hoodGroup);
+    orbit.ph = 0.6; orbit.th = 0.5; orbit.r = 4.4;   // camera swings over the bay
+  }
+  function closeHood() {
+    if (hoodGroup) { try { hoodGroup.parent.remove(hoodGroup); } catch (e) {} hoodGroup = null; }
   }
 
   function goTo(name) {
@@ -588,6 +716,12 @@ window.GARAGE3D = (() => {
     tween = { t: 0, fromP: camera.position.clone(), toP: new THREE.Vector3(...st.pos),
               fromL: camera.userData.look.clone(), toL: new THREE.Vector3(...st.look) };
     curStation = name;
+    if (name !== 'lift') {                     // hand the body back to your feet where you land
+      walk.x = st.pos[0]; walk.z = st.pos[2];
+      walk.yaw = Math.atan2(st.look[0] - st.pos[0], st.look[2] - st.pos[2]);
+      walk.pitch = -0.1;
+      closeHood();
+    }
     document.querySelectorAll('#gStationBar button').forEach(b => b.classList.toggle('on', b.dataset.st === name));
     $('gStationPanel').classList.remove('open');
     setTimeout(() => openPanel(name), 460);
@@ -606,6 +740,7 @@ window.GARAGE3D = (() => {
       camera.lookAt(camera.userData.look);
       if (tween.t >= 1) tween = null;
     } else if (curStation === 'lift') orbitCam();
+    else walkStep();
     if (shakeAnim) {                                     // the grab-shake wobble
       shakeAnim.t += 0.05;
       const a = shakeAnim.amp * Math.max(0, 1 - shakeAnim.t);
@@ -822,7 +957,8 @@ window.GARAGE3D = (() => {
       <div id="gStationBar">${Object.entries(STATIONS).map(([k, s]) =>
         `<button data-st="${k}" class="${k === 'door' ? 'on' : ''}">${s.label}</button>`).join('')}</div>
       <div id="gArmful"></div>
-      <div id="gStationPanel"></div>`;
+      <div id="gStationPanel"></div>
+      <div id="gJoy"><div id="gJoyNub"></div></div>`;
     const css = document.createElement('style');
     css.textContent = `
       #gToast { display:none; position:absolute; top:56px; left:50%; transform:translateX(-50%);
@@ -830,7 +966,12 @@ window.GARAGE3D = (() => {
         border-radius:10px; padding:10px 18px; font-size:14px; font-weight:700; max-width:86%;
         text-align:center; pointer-events:none; }
       #gToast.bad { border-color:#ff8c1a; color:#ffd9a8; }
-      #engGarage .gSlot, #engGarage .gGrab, #engGarage .gAction { min-height: 42px; }`;
+      #engGarage .gSlot, #engGarage .gGrab, #engGarage .gAction { min-height: 42px; }
+      #gJoy { position:absolute; left:22px; bottom:88px; width:84px; height:84px; border-radius:50%;
+        border:2px solid rgba(46,107,255,.4); background:rgba(10,17,40,.35); display:none;
+        align-items:center; justify-content:center; pointer-events:none; }
+      #gJoyNub { width:36px; height:36px; border-radius:50%; background:rgba(77,134,255,.75); }
+      @media (pointer: coarse) { #gJoy { display:flex; } }`;
     root.appendChild(css);
     $('garageModal').appendChild(root);
     root.querySelector('#gExit').onclick = close;
@@ -851,8 +992,9 @@ window.GARAGE3D = (() => {
       setTimeout(() => $('gActBanner').style.display = 'none', 9000);
     }
     curStation = 'door';
-    camera.position.set(...STATIONS.door.pos);
-    camera.userData.look.set(...STATIONS.door.look);
+    walk.x = 0; walk.z = 7.6; walk.yaw = Math.PI; walk.pitch = -0.08;
+    camera.position.set(walk.x, 1.68, walk.z);
+    camera.userData.look.set(0, 1.4, 0);
     renderArmful();
     if (!raf) loop();
   }

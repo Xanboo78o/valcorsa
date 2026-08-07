@@ -251,6 +251,10 @@ window.ECON = (() => {
     m.stab = act && act.assistOut ? 0.25 : 1;
     return modsCache = m;
   }
+  function activeEngine() {   // the active kart's Engine part id ('' = stock) — roar keys the Vocalmotor off this
+    const act = livery().find(k => k.id === activeId());
+    return (act && act.parts && act.parts.Engine) || '';
+  }
 
   // ---- garage UI: doors → livery rack → the SNAP WHEEL builder (Mario Kart style) ----
   // One category at a time; the wheel scroll-locks to an option; ◀ ▶ (or a sideways
@@ -293,7 +297,7 @@ window.ECON = (() => {
         if (free <= 0 && draftParts.Engine !== bid) continue;
         opts.push({ id: bid, label: b.name, sub: b.designation + ' · ' + b.vp + ' vp · by ' + b.builder, color: '#ff8c1a' });
       }
-      return opts;
+      // no return: sealed factory units (non-atom, non-legacy — the Vocalmotor) list below
     }
     for (const p of PARTS) {
       if (p.fam !== fam || (my[p.id] || 0) <= 0 || p.legacy || p.atom) continue;
@@ -440,6 +444,6 @@ window.ECON = (() => {
   }
 
   refreshBalance();   // boot injects us after DOMContentLoaded — refresh now
-  return { money, racePayout, refreshBalance, openPack, give, inv, cards, mods, garageUI,
+  return { money, racePayout, refreshBalance, openPack, give, inv, cards, mods, garageUI, activeEngine,
            dirty: () => { modsCache = null; } };
 })();

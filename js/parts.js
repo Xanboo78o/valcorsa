@@ -41,6 +41,11 @@ window.PARTS = (() => {
   // packs won't pull them, and karts can't run them. Real engines: js/enginecat.js.
   for (const p of P) p.legacy = true;   // everything added so far = the old engines
 
+  // THE ONE EXCEPTION: a sealed post-standard factory unit, VCRA type-approved
+  // under protest. No serviceable parts inside. Do not open. (It is a voice.)
+  add('Engine', 'Xanboo78MotorCorps', 'The Vocalmotor', 'legendary', 260,
+      { power: 96, weight: 44, heat: 5, reliability: 8 }, 'sealed at the factory. inside: a voice.');
+
   // ---- TIRES ----
   const TB = ['Valgrip', 'Södergummi', 'El Pulpo'];
   const TS = [
