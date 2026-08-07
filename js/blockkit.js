@@ -102,7 +102,9 @@
   const HUBS = (typeof HUB_COLS !== 'undefined') ? HUB_COLS : [0xc8ccd4, 0xe8e2ce, 0xc9a13b, 0x3a3e46, 0x20f6e8];
   window.buildToyCar = function (g, kit, helmetColor, headMats, tailMats) {
     const vehicle = { formula: 'f1', truck: 'monster', gt: 'coupe', muscle: 'muscle' }[kit.chassis] || kit.chassis;
-    const paint = toonMat(PAINTS[kit.paint % PAINTS.length]);
+    const paint = (typeof paintMat === 'function')          // Hot Wheels finish: clearcoat + rim (palette.js)
+      ? paintMat(PAINTS[kit.paint % PAINTS.length])
+      : toonMat(PAINTS[kit.paint % PAINTS.length]);
     const dark = toonMat(0x1c1e22);
     const glass = glassMat();
     const helmetMat = toonMat(helmetColor);
@@ -128,6 +130,15 @@
       (kind === 'head' ? headMats : tailMats).push(mat);
       add(new THREE.BoxGeometry(w, h, 0.06), mat, x, y, z);
     };
+    // ---- THE FACE — every marque gets eyes (always-on DRLs, unlit-bright day and night)
+    // and a mouth. Eyes sit NEXT TO the night lamps, never over them (beams must stay visible).
+    const EYE = 0xf2f8ff, EYE_WARM = 0xffeec4, PUPIL = 0x10141c;
+    const chromeM = new THREE.MeshStandardMaterial({ color: 0xdfe6ee, metalness: 1.0, roughness: 0.16, envMapIntensity: 1.5 });
+    const glowM = (c) => new THREE.MeshBasicMaterial({ color: c });
+    const eye = (x, y, z, r, c) => add(new THREE.CircleGeometry(r, 12), glowM(c || EYE), x, y, z);
+    const pupil = (x, y, z, r) => add(new THREE.CircleGeometry(r, 10), glowM(PUPIL), x, y, z);
+    const squint = (x, y, z, w, h, tilt) => add(new THREE.BoxGeometry(w, h, 0.03), glowM(EYE), x, y, z, 0, 0, tilt);
+    const tooth = (x, y, z, w, h) => add(new THREE.BoxGeometry(w, h, 0.05), chromeM, x, y, z);
     // wheel STYLES are visible now: hub size/color per style + deep-dish ring
     // 0 sport silver · 1 classic big cream · 2 gold deep-dish · 3 steelies · 4 neon
     const HUBR = [0.55, 0.66, 0.5, 0.4, 0.6];
@@ -254,6 +265,9 @@
         ['a', 'paint', 0.95, 0.48, -1.4, 0.54, 1.16, 1.16],
       ]);
       lamp('head', -0.58, 0.7, 2.24); lamp('head', 0.58, 0.7, 2.24);
+      // FACE: the predator — angry squint brow over the beams, wide hungry intake
+      squint(-0.52, 0.87, 2.245, 0.46, 0.075, -0.15); squint(0.52, 0.87, 2.245, 0.46, 0.075, 0.15);
+      add(new THREE.BoxGeometry(1.15, 0.2, 0.05), dark, 0, 0.5, 2.13);
       lamp('tail', -0.6, 0.72, -2.17, 0.42, 0.12); lamp('tail', 0.6, 0.72, -2.17, 0.42, 0.12);
       wheel(-0.95, 1.4, 1, 0.46, 0.42); wheel(0.95, 1.4, 1, 0.46, 0.42);
       wheel(-0.95, -1.4, 0, 0.48, 0.46); wheel(0.95, -1.4, 0, 0.48, 0.46);
@@ -278,6 +292,9 @@
         ['a', 'paint', 1.02, 0.54, -1.5, 0.6, 1.28, 1.28],
       ]);
       lamp('head', -0.62, 0.66, 2.42); lamp('head', 0.62, 0.66, 2.42);
+      // FACE: golden retriever with a V8 — big round eyes, five-tooth chrome grin
+      eye(-0.62, 0.85, 2.43, 0.14, EYE_WARM); eye(0.62, 0.85, 2.43, 0.14, EYE_WARM);
+      for (let tx = -2; tx <= 2; tx++) tooth(tx * 0.22, 0.44, 2.52, 0.1, 0.18);
       lamp('tail', -0.65, 0.7, -2.37, 0.5, 0.12); lamp('tail', 0.65, 0.7, -2.37, 0.5, 0.12);
       wheel(-1.02, 1.5, 1, 0.5, 0.46); wheel(1.02, 1.5, 1, 0.5, 0.46);
       wheel(-1.02, -1.5, 0, 0.54, 0.52); wheel(1.02, -1.5, 0, 0.54, 0.52);
@@ -303,6 +320,9 @@
       ]);
       lamp('head', -0.55, 0.86, 2.02); lamp('head', 0.55, 0.86, 2.02);
       lamp('head', -0.2, 1.2, 1.98, 0.18, 0.14); lamp('head', 0.2, 1.2, 1.98, 0.18, 0.14);   // pod lights
+      // FACE: over-caffeinated — four wide-open round eyes stacked rally style
+      eye(-0.5, 1.0, 2.02, 0.12); eye(0.5, 1.0, 2.02, 0.12);
+      eye(-0.2, 1.09, 2.02, 0.085); eye(0.2, 1.09, 2.02, 0.085);
       lamp('tail', -0.6, 0.9, -2.02); lamp('tail', 0.6, 0.9, -2.02);
       wheel(-1.0, 1.45, 1, 0.52, 0.5); wheel(1.0, 1.45, 1, 0.52, 0.5);
       wheel(-1.0, -1.45, 0, 0.52, 0.5); wheel(1.0, -1.45, 0, 0.52, 0.5);
@@ -331,6 +351,8 @@
       add(new THREE.BoxGeometry(0.14, 0.46, 0.14), dark, 0.27, 0.98, 0.4, 0, 0, -0.6);
       add(new THREE.BoxGeometry(0.13, 0.4, 0.3), dark, -0.25, 0.62, -0.4, 0.3);                     // legs gripping the tank
       add(new THREE.BoxGeometry(0.13, 0.4, 0.3), dark, 0.25, 0.62, -0.4, 0.3);
+      // FACE: the cyclops — one big round eye out front where the fender can't hide it
+      eye(0, 1.0, 1.315, 0.105);
       lamp('head', 0, 0.84, 1.28, 0.18, 0.16); lamp('tail', 0, 1.04, -1.34, 0.16, 0.1);
       wheel(0, 1.25, 1, 0.5, 0.22);
       wheel(0, -1.25, 0, 0.5, 0.26);
@@ -351,6 +373,10 @@
       add(new THREE.BoxGeometry(0.5, 0.2, 0.5), dark, 0, 2.72, 0.4);
       for (const lx of [-0.5, 0, 0.5]) add(new THREE.SphereGeometry(0.14, 8, 6), toonMat(0xfff2b0), lx, 2.88, 0.4);
       lamp('head', -0.6, 1.95, 1.98); lamp('head', 0.6, 1.95, 1.98);
+      // FACE: gentle giant — tiny eyes way up high, one MASSIVE chrome-barred grille
+      eye(-0.6, 2.08, 2.0, 0.09); eye(0.6, 2.08, 2.0, 0.09);
+      add(new THREE.BoxGeometry(1.5, 0.34, 0.06), dark, 0, 1.62, 1.99);
+      tooth(0, 1.54, 2.03, 1.3, 0.05); tooth(0, 1.62, 2.03, 1.3, 0.05); tooth(0, 1.7, 2.03, 1.3, 0.05);
       lamp('tail', -0.7, 1.65, -2.18); lamp('tail', 0.7, 1.65, -2.18);
       wheel(-1.15, 1.35, 1, 0.95, 0.8); wheel(1.15, 1.35, 1, 0.95, 0.8);
       wheel(-1.15, -1.35, 0, 0.95, 0.8); wheel(1.15, -1.35, 0, 0.95, 0.8);
@@ -367,6 +393,9 @@
       ]);
       add(new THREE.CylinderGeometry(0.02, 0.02, 0.7, 6), dark, 0, 0.62, 0.75, Math.PI / 3);
       add(new THREE.TorusGeometry(0.22, 0.04, 6, 10), dark, 0, 0.78, 0.95, Math.PI / 2.4);
+      // FACE: the gremlin — googly eyes on the nose, pupils looking somewhere stupid
+      eye(-0.26, 0.43, 1.36, 0.1); eye(0.26, 0.43, 1.36, 0.1);
+      pupil(-0.24, 0.405, 1.368, 0.045); pupil(0.285, 0.41, 1.368, 0.045);
       rider(-0.1);
       wheel(-0.72, 0.95, 1, 0.34, 0.3); wheel(0.72, 0.95, 1, 0.34, 0.3);
       wheel(-0.78, -0.95, 0, 0.4, 0.42); wheel(0.78, -0.95, 0, 0.4, 0.42);
@@ -400,6 +429,8 @@
       add(new THREE.CylinderGeometry(0.035, 0.05, 0.34, 6), dark, 0, 0.84, 0.52, 0.5);       // halo pillar, raked
       add(new THREE.SphereGeometry(0.27, 10, 8), helmetMat, 0, 0.8, 0.28);
       lamp('tail', 0, 0.92, -2.32, 0.16, 0.22);                                              // rain light
+      // FACE: the Storm stare — one cold LED slit across the nose tip
+      squint(0, 0.51, 2.885, 0.36, 0.055, 0);
       wheel(-1.0, 1.5, 1, 0.44, 0.4); wheel(1.0, 1.5, 1, 0.44, 0.4);
       wheel(-1.04, -1.45, 0, 0.47, 0.46); wheel(1.04, -1.45, 0, 0.47, 0.46);
 
@@ -427,6 +458,9 @@
       lamp('head', -0.62, 0.84, 2.32, 0.3, 0.14); lamp('head', 0.62, 0.84, 2.32, 0.3, 0.14);
       lamp('head', -0.32, 0.88, 2.36, 0.16, 0.16); lamp('head', 0.32, 0.88, 2.36, 0.16, 0.16);
       lamp('head', -0.28, 1.24, 0.24, 0.14, 0.1); lamp('head', 0.28, 1.24, 0.24, 0.14, 0.1); // canopy brow pods
+      // FACE: the October monster — four extra spider eyes riding above the lamp clusters
+      eye(-0.62, 0.96, 2.34, 0.07, EYE_WARM); eye(0.62, 0.96, 2.34, 0.07, EYE_WARM);
+      eye(-0.32, 1.0, 2.38, 0.055, EYE_WARM); eye(0.32, 1.0, 2.38, 0.055, EYE_WARM);
       lamp('tail', -0.8, 0.86, -2.2, 0.3, 0.1); lamp('tail', 0.8, 0.86, -2.2, 0.3, 0.1);
       wheel(-1.0, 1.45, 1, 0.48, 0.44); wheel(1.0, 1.45, 1, 0.48, 0.44);
       wheel(-1.0, -1.45, 0, 0.5, 0.48); wheel(1.0, -1.45, 0, 0.5, 0.48);
@@ -448,6 +482,9 @@
       add(new THREE.TorusGeometry(0.2, 0.04, 6, 10), dark, 0, 0.82, 0.84, Math.PI / 2.4);
       lamp('head', 0, 0.4, 1.66, 0.2, 0.1);
       lamp('tail', 0, 0.5, -1.14, 0.2, 0.1);
+      // FACE: eyes on the cask itself — the barrel is the guy, the spigot is his nose
+      eye(-0.2, 1.0, 0.45, 0.09); eye(0.2, 1.0, 0.45, 0.09);
+      pupil(-0.185, 0.98, 0.458, 0.04); pupil(0.215, 0.98, 0.458, 0.04);
       wheel(-0.7, 0.95, 1, 0.34, 0.3); wheel(0.7, 0.95, 1, 0.34, 0.3);
       wheel(-0.74, -0.85, 0, 0.4, 0.42); wheel(0.74, -0.85, 0, 0.4, 0.42);
 
@@ -476,6 +513,8 @@
       add(new THREE.BoxGeometry(0.06, 0.05, 0.9), dark, 0.2, 0.24, -3.0);
       add(new THREE.CylinderGeometry(0.09, 0.09, 0.3, 8), dark, 0, 0.14, -3.42, 0, 0, Math.PI / 2);
       lamp('head', -0.26, 0.52, 2.72, 0.18, 0.1); lamp('head', 0.26, 0.52, 2.72, 0.18, 0.1);
+      // FACE: little eyes way out on the long nose — unhinged and far from home
+      eye(-0.26, 0.63, 2.72, 0.075); eye(0.26, 0.63, 2.72, 0.075);
       lamp('tail', -0.26, 0.58, -2.72, 0.2, 0.1); lamp('tail', 0.26, 0.58, -2.72, 0.2, 0.1);
       wheel(-0.72, 2.3, 1, 0.34, 0.22); wheel(0.72, 2.3, 1, 0.34, 0.22);    // skinny fronts way out there
       wheel(-0.86, -2.05, 0, 0.6, 0.62); wheel(0.86, -2.05, 0, 0.6, 0.62);  // the meats
@@ -505,6 +544,9 @@
       add(new THREE.BoxGeometry(0.5, 0.55, 0.4), dark, 0, 1.0, -0.32);                             // couch-potato torso, leaned back
       add(new THREE.SphereGeometry(0.28, 10, 8), helmetMat, 0, 1.42, -0.28);
       lamp('head', -0.5, 0.42, 1.12, 0.16, 0.12); lamp('head', 0.5, 0.42, 1.12, 0.16, 0.12);       // taped-on flashlights
+      // FACE: born with googly eyes and doesn't know it — mismatched pupils, maximum derp
+      eye(-0.5, 0.55, 1.13, 0.1); eye(0.5, 0.55, 1.13, 0.1);
+      pupil(-0.475, 0.53, 1.138, 0.045); pupil(0.485, 0.525, 1.138, 0.04);
       lamp('tail', -0.6, 0.48, -1.38, 0.18, 0.1); lamp('tail', 0.6, 0.48, -1.38, 0.18, 0.1);
       wheel(-0.85, 0.85, 1, 0.32, 0.26); wheel(0.85, 0.85, 1, 0.32, 0.26);
       wheel(-0.85, -0.85, 0, 0.36, 0.3); wheel(0.85, -0.85, 0, 0.36, 0.3);
@@ -534,6 +576,8 @@
       add(new THREE.SphereGeometry(0.29, 10, 8), helmetMat, 0, 0.88, 0.3);
       add(new THREE.BoxGeometry(0.4, 0.06, 0.2), dark, 0, 0.72, 0.62);     // dash + tiny wheel
       lamp('tail', 0, 0.82, -2.2, 0.18, 0.18);
+      // FACE: the vintage gentleman — two small warm eyes on the nose drop, wing for a mustache
+      eye(-0.22, 0.58, 2.02, 0.075, EYE_WARM); eye(0.22, 0.58, 2.02, 0.075, EYE_WARM);
       wheel(-0.95, 1.5, 1, 0.4, 0.28); wheel(0.95, 1.5, 1, 0.4, 0.28);     // skinny fronts
       wheel(-1.02, -1.35, 0, 0.52, 0.56); wheel(1.02, -1.35, 0, 0.52, 0.56); // FAT rear slicks
     }
