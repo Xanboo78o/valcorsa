@@ -24,6 +24,56 @@ function ovalPoints(halfLength, halfWidth, cornerR, ptsPerCorner) {
 
 const TRACKS = [
   {
+    // HERO 1 of the 40 — designed with Adam in 25 questions (TRACKS-QA.md).
+    // The capital's clip cathedral: opening night of every season lives here.
+    id: 'dreipuentes',
+    name: 'Circuito Drei Puentes',
+    mode: 'SMASHKART',
+    desc: 'THE SHOW. Opening night, every season. Fly La Voladora, surf the neon canyon, cross all three bridges, and pick your deck in the Coliseo — the fork never deals the same surfaces twice.',
+    width: 30,
+    hills: 0,
+    surface: 'asphalt',
+    env: 'city',
+    laps: 3,
+    walls: true,
+    night: true,                                    // always The Show After Dark (floodlit bright)
+    dress: true,
+    // the Coliseo fork: lanes rotate surfaces every lap — L1 asphalt+dirt, L2 dirt+wet, L3 wet+asphalt
+    laneZones: [[0.58, 0.71]],
+    laneRotate: [['asphalt', 'dirt'], ['dirt', 'wet'], ['wet', 'asphalt']],
+    tunnel: [0.73, 0.82],                           // the exit tunnel dives UNDER the river
+    points: [
+      // start/finish: Avenida de la Fundación
+      [0, 0, 0], [120, 4, 0], [230, 2, 0],
+      // LA VOLADORA — the ramp over the main grandstand, airborne every lap
+      [310, -4, 5], [380, -14, 16], [462, -34, 3],
+      // dive south into THE NEON CANYON (Kesselgasse — the loudest street in the nation)
+      [512, -96, 1], [498, -176, 0], [556, -244, 0], [500, -314, 0], [558, -386, 0], [516, -462, 0],
+      // south-west sweep to the river
+      [430, -540, 0], [300, -566, 0],
+      // PUENTE UNO (north bank -> south bank)
+      [225, -604, 3], [182, -662, 7], [140, -724, 3],
+      // south bank boulevard
+      [48, -764, 0], [-76, -744, 0],
+      // PUENTE DOS (south -> north)
+      [-136, -700, 6], [-178, -640, 8], [-222, -582, 3],
+      // north bank, Altstadt side
+      [-336, -560, 1], [-452, -588, 0],
+      // PUENTE DREI (north -> south, the old one)
+      [-498, -646, 5], [-520, -704, 7], [-540, -762, 3],
+      // approach EL COLISEO
+      [-566, -866, 0],
+      // THE COLISEO — the bowl; the fork runs through here (divider island + rotating lanes)
+      [-518, -952, 0], [-450, -1030, 0], [-472, -1128, 1], [-576, -1176, 1], [-688, -1128, 0], [-700, -1016, 0],
+      // exit chute
+      [-646, -924, -1],
+      // THE EXIT TUNNEL — under the river, back to the north bank
+      [-600, -800, -4], [-560, -680, -5], [-520, -556, -3],
+      // resurface + the long TV sweep home
+      [-472, -420, 0], [-380, -280, 0], [-250, -150, 0], [-110, -50, 0],
+    ],
+  },
+  {
     id: 'perrosaltarin',
     name: 'Cañón del Perro Saltarín',
     mode: 'SMASHKART',

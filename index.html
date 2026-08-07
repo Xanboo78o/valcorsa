@@ -158,6 +158,7 @@
     <p class="subline">Every town has a track. Every grid has locals. Pre-season testing is open.</p>
     <div id="homeMenu" class="pg">
       <button id="quickRace" onclick="startQuick()">QUICK RACE<span>Smashkart · Cañón del Perro Saltarín</span></button>
+      <div id="schedCard"></div>
       <div id="diffRow">
         <button class="navBtn" id="liveBtn" onclick="openLive()">RACE LIVE</button>
         <button class="navBtn" id="openWorldBtn" onclick="startFreeRoam()">CRUISE SAN VOLANTE</button>
@@ -420,6 +421,18 @@
   </div>
 </div>
 
+<!-- Scheduled race grid: Valcorsa called this race, you just showed up -->
+<div id="schedLobby">
+  <div class="panel livePanel">
+    <h2>THE GRID</h2>
+    <b id="schedLobbyName" class="schedName"></b>
+    <p id="schedLobbyWhen" class="schedWhen"></p>
+    <div id="schedLobbyRoster"></div>
+    <p class="setNote">Whoever's here when the lights go out — races. The locals fill the rest.</p>
+    <button class="closeSet" onclick="leaveSched()">Leave the grid</button>
+  </div>
+</div>
+
 <!-- LIVE: rooms are races your friends are actually in -->
 <div id="liveModal">
   <div class="panel livePanel">
@@ -452,8 +465,8 @@
 <script type="importmap">
 { "imports": { "three": "./js/vendor/three.module.min.js", "three/addons/": "./js/vendor/addons/" } }
 </script>
-<script>window.APEX_V = '20260807v20';</script>
-<script type="module" src="js/boot.js?v=20260807v20"></script>
+<script>window.APEX_V = '20260807v22';</script>
+<script type="module" src="js/boot.js?v=20260807v22"></script>
 <script>window.resumeGameBtn = () => resumeGame();</script>
 </body>
 </html>

@@ -186,7 +186,8 @@ function dnRefreshEnv() {
 
 function dnUpdate(dt, force) {
   if (!DN.sky || !scene) return;
-  const { elev, az } = sunPosition(new Date());
+  let { elev, az } = sunPosition(new Date());
+  if (DN.venueNight) elev = -0.35;                    // venue-forced night (Puentes: The Show)
   DN.elev = elev; DN.az = az;
   // world axes: x = east, z = south (north is -z)
   const ce = Math.cos(elev);

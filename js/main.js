@@ -68,6 +68,7 @@ function gearStep(car, speed) {
 const SURFACES = {
   asphalt: { grip: 1.0, accelMul: 1.0, dragMul: 1.0 },
   dirt:    { grip: 0.66, accelMul: 0.9, dragMul: 1.05 },
+  wet:     { grip: 0.76, accelMul: 0.97, dragMul: 1.0 },   // river-sprayed slick asphalt
   grass:   { grip: 0.4, accelMul: 0.42, dragMul: 2.8 },
   sand:    { grip: 0.34, accelMul: 0.36, dragMul: 3.6 },
 };
@@ -1923,6 +1924,12 @@ function resetCar(car) {
 }
 
 // ---------------------------------------------------------------- physics
+function laneSideLat(car) {   // signed lateral offset from the centerline (+ = left of travel)
+  const p = track.samples[car.idx], n = track.samples[(car.idx + 1) % track.N];
+  const tx = n.x - p.x, tz = n.z - p.z, tl = Math.hypot(tx, tz) || 1;
+  return (tx * (car.z - p.z) - tz * (car.x - p.x)) / tl;
+}
+
 function surfaceAt(car) {
   const { def } = track;
   if (track.open) {                                  // open world: nearest road of any street
@@ -1934,6 +1941,15 @@ function surfaceAt(car) {
   const d = Math.hypot(car.x - p.x, car.z - p.z);
   car.onRoad = d <= track.halfW + 0.7;
   if (car.onRoad) {
+    if (def.laneZones) {                             // forked sections: surface differs per LANE,
+      const f = car.idx / track.N;                   // and the pairs can ROTATE lap to lap (Puentes)
+      for (const z of def.laneZones) if (f >= z[0] && f <= z[1]) {
+        const pair = def.laneRotate
+          ? def.laneRotate[Math.max(0, car.lap) % def.laneRotate.length]
+          : [z[2], z[3]];
+        return SURFACES[pair[laneSideLat(car) > 0 ? 0 : 1]] || SURFACES[def.surface];
+      }
+    }
     if (def.surfaceZones) {                          // mixed-surface tracks: grip changes mid-lap
       const f = car.idx / track.N;
       for (const z of def.surfaceZones) if (f >= z[0] && f <= z[1]) return SURFACES[z[2]];
@@ -2093,6 +2109,27 @@ function stepCar(car, input, dt) {
         car.velX -= vOut * nx * 1.35;
         car.velZ -= vOut * nz * 1.35;
         car.velX *= 0.9; car.velZ *= 0.9;
+      }
+    }
+    // forked sections (Puentes Coliseo): a divider island splits the road — pick a
+    // side and stay on it. Grazing the divider is a wall hit like any other.
+    if (track.def.laneZones) {
+      const f = car.idx / track.N;
+      for (const z of track.def.laneZones) if (f >= z[0] && f <= z[1]) {
+        const lat = laneSideLat(car), DIV = 2.4;
+        if (Math.abs(lat) < DIV) {
+          const p2 = track.samples[car.idx], n2 = track.samples[(car.idx + 1) % track.N];
+          const tx = (n2.x - p2.x), tz = (n2.z - p2.z), tl = Math.hypot(tx, tz) || 1;
+          const px = tz / tl, pz = -tx / tl;             // +lat direction
+          const target = lat >= 0 ? DIV : -DIV;
+          car.x += px * (target - lat); car.z += pz * (target - lat);
+          const vLat = car.velX * px + car.velZ * pz;
+          if (Math.sign(vLat) !== Math.sign(target)) {   // moving into the island
+            if (window.DMG) DMG.impact(car, Math.abs(vLat) * 0.7);
+            car.velX -= vLat * px * 1.2; car.velZ -= vLat * pz * 1.2;
+          }
+        }
+        break;
       }
     }
   } else if (typeof worldCollide === 'function') {
@@ -2300,6 +2337,26 @@ function startGame(def, m) {
   $('acctChip').style.display = 'none';
   $('results').style.display = 'none';
   buildTrack(def);
+  // venue-forced night (The Show): dark sky, but the floods make it day-bright on track
+  if (typeof DN !== 'undefined') DN.venueNight = !!def.night;
+  if (def.night) {
+    const floods = new THREE.AmbientLight(0xdde9ff, 1.7);
+    floods.name = 'venueFloods';
+    scene.add(floods);
+  }
+  // fork divider island: a glowing barrier down the middle of every laneZone
+  if (def.laneZones) for (const z of def.laneZones) {
+    const i0 = Math.floor(z[0] * track.N), i1 = Math.floor(z[1] * track.N);
+    for (let i = i0; i < i1; i += 4) {
+      const s0 = track.samples[i];
+      const b = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.5, 5.6),
+        new THREE.MeshStandardMaterial({ color: 0x18305e, emissive: 0x2e6bff, emissiveIntensity: 0.7 }));
+      const s1 = track.samples[(i + 1) % track.N];
+      b.position.set(s0.x, (s0.y || 0) + 0.75, s0.z);
+      b.rotation.y = Math.atan2(s1.x - s0.x, s1.z - s0.z);
+      scene.add(b);
+    }
+  }
 
   cars = [];
   const nAI = mode === 'race' ? 11 : 0;              // 11 AI + you = 12 drivers
