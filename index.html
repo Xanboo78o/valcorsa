@@ -26,16 +26,67 @@
   <div class="smear q1"></div><div class="smear q2"></div>
   <div class="smear q3"></div><div class="smear q4"></div>
   <div class="introBrand"><div class="iFlag"></div><h1>VALCORSA</h1><p>HOME OF RACING</p></div>
+  <div id="introGate"><div class="gFlag"><i></i><i></i><i></i><i></i></div><p>TAP IN</p></div>
 </div>
 <script>
 (function () {
   const ov = document.getElementById('introSplash');
   if (sessionStorage.getItem('vc_intro')) { ov.remove(); return; }
   sessionStorage.setItem('vc_intro', '1');
-  requestAnimationFrame(() => ov.classList.add('run'));
-  const end = () => { ov.classList.add('out'); setTimeout(() => ov.remove(), 500); };
-  ov.addEventListener('pointerdown', end);
-  setTimeout(end, 4200);
+  // The gate tap is the audio unlock: browsers only allow sound after a gesture,
+  // so the cars stay silent until someone taps in.
+  let actx = null, roar = null;
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    fetch('sfx/gtpull.wav').then(r => r.arrayBuffer()).then(b => actx.decodeAudioData(b))
+      .then(d => { roar = d; }).catch(() => {});
+  } catch (e) {}
+  const fly = (at, rate, fromL) => {          // one car rips past: doppler drop + pan across
+    if (!actx || !roar) return;
+    const t = actx.currentTime + at;
+    const src = actx.createBufferSource(); src.buffer = roar; src.loop = true;
+    const g = actx.createGain();
+    const pan = actx.createStereoPanner ? actx.createStereoPanner() : null;
+    src.playbackRate.setValueAtTime(1.5 * rate, t);
+    src.playbackRate.exponentialRampToValueAtTime(0.62 * rate, t + 0.5);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.85, t + 0.16);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.62);
+    src.connect(g);
+    if (pan) { pan.pan.setValueAtTime(fromL ? -1 : 1, t); pan.pan.linearRampToValueAtTime(fromL ? 1 : -1, t + 0.5); g.connect(pan); pan.connect(actx.destination); }
+    else g.connect(actx.destination);
+    src.start(t); src.stop(t + 0.75);
+  };
+  const boom = (at) => {                      // the flag lands
+    if (!actx) return;
+    const t = actx.currentTime + at;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(36, t + 0.5);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.9, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + 0.75);
+  };
+  const end = () => { ov.classList.add('out'); setTimeout(() => { ov.remove(); if (actx) actx.close().catch(() => {}); }, 500); };
+  let began = false;
+  const start = () => {
+    if (began) return; began = true;
+    const gate = document.getElementById('introGate');
+    if (gate) gate.classList.add('gone');
+    ov.classList.add('run');
+    if (actx) actx.resume().catch(() => {});
+    fly(0.24, 1.0, true); fly(0.66, 1.14, false); fly(1.03, 0.9, true); fly(1.36, 1.28, false);
+    boom(1.88);
+    ov.addEventListener('pointerdown', end);
+    setTimeout(end, 4200);
+  };
+  ov.addEventListener('pointerdown', function gateTap() {
+    ov.removeEventListener('pointerdown', gateTap);
+    start();
+  });
+  setTimeout(start, 9000);                    // nobody taps? run it anyway (muted by the browser)
 })();
 </script>
 

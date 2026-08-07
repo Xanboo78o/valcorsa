@@ -1824,3 +1824,37 @@ body.tabsOn #shopModal .storeFront { max-height: calc(100dvh - 92px); margin-bot
 .ssRow small { font-size: 9.5px; color: #5a6d8e; font-weight: 700; }
 .ssRow.me { background: #e3edfb; border-color: #16233c; }
 .ssNote { font-size: 12px; color: #5a6d8e; font-style: italic; }
+
+/* ==== V17.1 SPEC SHEETS — 5 real stats per thing (storm language) ==== */
+#itemStats { margin: 8px 0 4px; }
+#itemStats .sHead { font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: #8fa8e8; margin: 0 0 4px; }
+.loBar em { font-style: normal; font-size: 10px; min-width: 20px; text-align: right;
+  opacity: .8; font-variant-numeric: tabular-nums; }
+.garagePanel #itemStats .loBar span { color: rgba(238,243,255,.72); }
+.garagePanel #itemStats .loBar div { background: rgba(46,107,255,.16); border-radius: 0; }
+.garagePanel #itemStats .loBar i { background: #2e6bff; border-radius: 0; }
+.garagePanel #itemStats .loBar.bad i { background: #ff8c1a; }
+.garagePanel #itemStats .loBar em { color: #eef3ff; }
+/* store product tiles are light — ink the sheet */
+.prodStats { display: flex; flex-direction: column; gap: 1px; margin: 3px 0 4px; width: 100%; }
+.prodStats .loBar { margin: 0; gap: 5px; }
+.prodStats .loBar span { width: 52px; font-size: 8px; letter-spacing: .04em; color: #2a3a58; opacity: 1; }
+.prodStats .loBar div { height: 5px; background: #d6ddef; border-radius: 0; }
+.prodStats .loBar i { background: #2e6bff; border-radius: 0; }
+.prodStats .loBar.bad i { background: #ff8c1a; }
+.prodStats .loBar em { font-size: 8px; min-width: 14px; color: #2a3a58; }
+
+/* ---- INTRO GATE (the tap that unlocks the flyby sound) ---- */
+#introGate { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 20px; }
+#introGate .gFlag { width: 36px; height: 36px; display: grid;
+  grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+  outline: 1.5px solid rgba(255,255,255,.7); outline-offset: 3px; }
+#introGate .gFlag i:nth-child(1), #introGate .gFlag i:nth-child(4) { background: #ff8c1a; }
+#introGate .gFlag i:nth-child(2), #introGate .gFlag i:nth-child(3) { background: #2e6bff; }
+#introGate p { font-family: 'Archivo Black', sans-serif; font-size: 21px; letter-spacing: 7px;
+  padding-left: 7px; color: #eef3ff; text-shadow: 0 0 16px rgba(46,107,255,.85);
+  animation: gatePulse 1.4s ease-in-out infinite; }
+@keyframes gatePulse { 50% { opacity: .4; } }
+#introGate.gone { display: none; }
