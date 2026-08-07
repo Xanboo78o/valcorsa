@@ -1845,3 +1845,88 @@ body.tabsOn #shopModal .storeFront { max-height: calc(100dvh - 92px); margin-bot
 .prodStats .loBar.bad i { background: #ff8c1a; }
 .prodStats .loBar em { font-size: 8px; min-width: 14px; color: #2a3a58; }
 
+
+/* ==== V18 ROOKIE PROGRAM + SLANT-FOR-THE-LIVING (Adam's FTUE spec) ==== */
+/* the guide bubble — slanted: it's alive */
+#rkBubble { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%) skewX(-6deg);
+  z-index: 200; max-width: min(480px, 88vw); cursor: pointer; animation: rkIn .3s cubic-bezier(.2,.9,.3,1.2); }
+#rkBubble .rkInner { transform: skewX(0deg); background: rgba(8,14,30,.94); border: 1.5px solid #2e6bff;
+  box-shadow: 0 0 18px rgba(46,107,255,.35), 0 8px 24px rgba(0,0,0,.5);
+  padding: 14px 18px; color: #eef3ff; font-size: 13px; line-height: 1.45; }
+#rkBubble .rkInner > * { transform: skewX(6deg); display: inline-block; }
+#rkBubble b { color: #fff; }
+#rkBubble .rkOrange { color: #ff8c1a; }
+#rkBubble .rkDim { color: #8fa8e8; font-size: 11px; }
+#rkBubble .rkTap { display: block; text-align: right; font-size: 9px; letter-spacing: .12em;
+  text-transform: uppercase; color: #8fa8e8; margin-top: 6px; animation: gatePulse 1.4s infinite; }
+#rkBubble .rkBtns { display: flex; gap: 8px; margin-top: 10px; }
+#rkBubble .rkBtns button { flex: 1; min-width: 0 !important; padding: 8px; font-size: 11px; }
+@keyframes rkIn { from { opacity: 0; transform: translateX(-50%) skewX(-6deg) translateY(14px); } }
+
+/* quick race hero pulse while it's the only door */
+#quickRace.rkGlow { animation: rkHero 1.6s ease-in-out infinite; }
+@keyframes rkHero { 50% { box-shadow: 0 0 34px rgba(255,140,26,.75); transform: scale(1.02); } }
+
+/* a newly unlocked tab announces itself */
+#tabBar button.rkNew { animation: rkHero 1.2s ease-in-out infinite; color: #ff8c1a; }
+
+/* account screen: suggestion row */
+#rkSuggestRow { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+#rkSuggestRow span { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #8fa8e8; }
+#rkSuggestRow button { min-width: 0 !important; padding: 8px 12px; font-size: 13px; }
+#rkSuggestRow #rkSuggest { flex: 1; color: #ff8c1a; font-weight: 800; }
+#rkSuggestRow #rkReroll { width: 44px; font-size: 16px; }
+
+/* ---- TEAMS panel ---- */
+#teamsModal { display: none; position: fixed; inset: 0; z-index: 60; align-items: center; justify-content: center; }
+.teamsPanel { width: min(680px, 94vw); max-height: 88dvh; overflow-y: auto; }
+.tmSplit { display: flex; gap: 12px; flex-wrap: wrap; }
+.tmCard { flex: 1; min-width: 240px; background: rgba(46,107,255,.08); border: 1px solid rgba(46,107,255,.4);
+  padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.tmCard b { font-size: 13px; letter-spacing: .06em; }
+.tmCard input { width: 100%; box-sizing: border-box; }
+#tmColors { display: flex; gap: 6px; }
+#tmColors i { width: 26px; height: 26px; cursor: pointer; border: 2px solid transparent; }
+#tmColors i.sel { border-color: #fff; outline: 1.5px solid rgba(255,255,255,.55); outline-offset: 2px; }
+.tmHead { display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  background: rgba(46,107,255,.08); border: 1px solid rgba(46,107,255,.4); }
+.tmHead .tmChip { width: 30px; height: 30px; background: var(--tc); transform: skewX(-8deg); }
+.tmHead b { display: block; font-size: 16px; }
+.tmHead span { font-size: 11px; color: #8fa8e8; }
+.tmHead .tmCode { font-style: normal; color: #ff8c1a; font-weight: 800; letter-spacing: .2em; }
+.tmHead button { margin-left: auto; min-width: 0 !important; padding: 8px 14px; font-size: 11px; }
+#tmRoster { display: flex; flex-wrap: wrap; gap: 6px; }
+.tmTable { width: 100%; border-collapse: collapse; }
+.tmTable td { padding: 7px 8px; border-bottom: 1px solid rgba(143,168,232,.15); font-size: 13px; }
+.tmTable .tmP { font-family: 'Archivo Black', sans-serif; font-size: 17px; width: 34px;
+  transform: skewX(-8deg); color: #8fa8e8; }
+.tmTable tr.me td { background: rgba(255,140,26,.1); color: #ff8c1a; }
+.tmTable .tmPts { text-align: right; font-weight: 800; }
+.tmDot { display: inline-block; width: 10px; height: 10px; margin-right: 8px; transform: skewX(-8deg); }
+
+/* ---- THE SHOWROOM: your kart lives on the home screen ---- */
+#showroomWrap { position: absolute; right: 1vw; bottom: 76px; z-index: 1; pointer-events: none; }
+#showroomWrap canvas { width: min(340px, 30vw); height: auto; display: block;
+  filter: drop-shadow(0 10px 24px rgba(0,0,0,.5)); }
+#showroomChip { position: absolute; left: 50%; bottom: 4px; transform: translateX(-50%) skewX(-8deg);
+  background: rgba(8,14,30,.9); border: 1px solid #2e6bff; padding: 4px 14px; white-space: nowrap; }
+#showroomChip b { font-size: 12px; letter-spacing: .06em; color: #fff; }
+#showroomChip span { font-family: 'Archivo Black', sans-serif; font-size: 12px; color: #ff8c1a; margin-left: 8px; }
+@media (max-width: 860px) { #showroomWrap canvas { width: 26vw; } }
+@media (max-width: 620px) { #showroomWrap { display: none; } }
+.menuInner { position: relative; z-index: 2; }
+
+/* ---- living things slant (the italic of Valcorsa: square at rest, angled in motion) ---- */
+.schedWhen, #schedCard .schedWhen { display: inline-block; transform: skewX(-8deg);
+  font-family: 'Archivo Black', sans-serif; letter-spacing: .04em; }
+#standingsBody table { width: 100%; border-collapse: collapse; }
+#standingsBody td { padding: 8px 10px; border-bottom: 1px solid rgba(143,168,232,.15); font-size: 13px; }
+#standingsBody td:first-child { font-family: 'Archivo Black', sans-serif; font-size: 18px; width: 40px;
+  transform: skewX(-8deg); color: #8fa8e8; }
+#standingsBody tr:nth-child(-n+3) td:first-child { color: #ff8c1a; }
+#standingsBody tr.me td { background: rgba(255,140,26,.12); color: #ff8c1a; }
+#standingsBody td:nth-child(3) { text-align: right; font-weight: 800; }
+/* suggestion chips: dark glass, not the orange hero (the acctBox hero rule bleeds in) */
+#rkSuggestRow button { background: rgba(8,14,30,.92) !important; color: #ff8c1a !important;
+  border: 1px solid rgba(46,107,255,.55) !important; box-shadow: none !important; }
+body.rkSchool #countdown { display: none !important; }

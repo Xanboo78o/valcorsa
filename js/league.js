@@ -34,7 +34,7 @@ window.LEAGUE = (() => {
     try {
       await c.from('league_results').upsert({
         league: leagueNow(), day, slot, room,
-        player: a.name || 'RACER', pcode: a.code || '', pos: myPos, pts,
+        player: a.username || a.name || 'RACER', pcode: a.code || '', pos: myPos, pts,
       }, { onConflict: 'league,day,slot,player,pcode' });
       if (window.toast) toast('🏆 P' + myPos + ' · +' + pts + ' pts — ' + (leagueNow() === 'hard' ? 'HARD' : 'VCRA STANDARD') + ' LEAGUE');
     } catch (e) { /* offline: the race still happened, the points didn't */ }
@@ -43,7 +43,7 @@ window.LEAGUE = (() => {
   // NET calls this with compiled live results; find my row
   function onLiveResults(results, room) {
     const a = acct();
-    const mine = results.findIndex(r => r.name === (a.name || 'RACER'));
+    const mine = results.findIndex(r => r.name === (a.username || a.name || 'RACER'));
     if (mine >= 0) postResult(room, mine + 1);
   }
 
@@ -76,7 +76,7 @@ window.LEAGUE = (() => {
     const rows = await fetchStandings(league);
     body.innerHTML = rows.length
       ? '<table>' + rows.map((r, i) =>
-          `<tr class="${r.player === (acct().name || '') ? 'me' : ''}">
+          `<tr class="${r.player === (acct().username || acct().name || '') ? 'me' : ''}">
             <td>${i + 1}</td><td>${r.player}</td><td>${r.pts} pts</td><td>${r.races} race${r.races === 1 ? '' : 's'}</td>
           </tr>`).join('') + '</table>'
       : '<p class="setNote">No results yet. The season starts when somebody races a scheduled grid.</p>';

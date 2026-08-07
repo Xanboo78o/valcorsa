@@ -26,6 +26,9 @@
     if (modalOpen('settingsModal')) return 'settings';
     if (modalOpen('garageModal')) return 'garage';
     if (modalOpen('shopModal')) return 'shop';
+    if (modalOpen('teamsModal')) return 'teams';
+    const ss = $('seasonScreen');
+    if (ss && ss.style.display === 'block') return 'season';
     const v = $('venuesMenu');
     return (v && v.style.display !== 'none') ? 'venues' : 'home';
   }
@@ -37,11 +40,15 @@
     if (modalOpen('garageModal') && tab !== 'garage') closeGarage();
     if (modalOpen('shopModal') && tab !== 'shop') closeShop();
     if (modalOpen('settingsModal') && tab !== 'settings') closeSettings();
+    if (modalOpen('teamsModal') && tab !== 'teams' && window.closeTeams) closeTeams();
+    if (tab !== 'season' && window.closeSeason) { const ss = $('seasonScreen'); if (ss && ss.style.display === 'block') closeSeason(); }
     if (tab === 'home') hideVenues();
     else if (tab === 'venues') showVenues();
     else if (tab === 'garage') { if (!modalOpen('garageModal')) openGarage(); }
     else if (tab === 'shop') { if (!modalOpen('shopModal')) openShop(); }
     else if (tab === 'settings') { if (!modalOpen('settingsModal')) openSettings(); }
+    else if (tab === 'teams') { if (!modalOpen('teamsModal') && window.openTeams) openTeams(); }
+    else if (tab === 'season') { const ss = $('seasonScreen'); if (!(ss && ss.style.display === 'block') && window.openSeason) openSeason(); }
     vcTabSync();
   };
 
@@ -56,12 +63,14 @@
     vcTabSync();
   }
   const mo = new MutationObserver(updateBar);
-  ['menu', 'accountScreen', 'garageModal', 'settingsModal', 'pairModal', 'venuesMenu'].forEach(id => {
+  ['menu', 'accountScreen', 'garageModal', 'settingsModal', 'pairModal', 'venuesMenu', 'teamsModal', 'seasonScreen'].forEach(id => {
     const el = $(id); if (el) mo.observe(el, { attributes: true, attributeFilter: ['style'] });
   });
-  const bodyMo = new MutationObserver(() => {           // the shop modal is built lazily
-    const shop = $('shopModal');
-    if (shop && !shop._observed) { shop._observed = true; mo.observe(shop, { attributes: true, attributeFilter: ['style'] }); updateBar(); }
+  const bodyMo = new MutationObserver(() => {           // shop/teams/season modals are built lazily
+    for (const id of ['shopModal', 'teamsModal', 'seasonScreen']) {
+      const m = $(id);
+      if (m && !m._observed) { m._observed = true; mo.observe(m, { attributes: true, attributeFilter: ['style'] }); updateBar(); }
+    }
   });
   bodyMo.observe(document.body, { childList: true });
   updateBar();
