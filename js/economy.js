@@ -100,6 +100,7 @@ window.ECON = (() => {
         <b class="prodName">${p.name}</b>
         <small class="prodBrand">${p.brand}</small>
         <small class="prodNote">${stats || p.note || '&nbsp;'}</small>
+        ${p.atom ? '<small class="prodNote" style="color:#ff8c1a;font-weight:700">🔧 WORKBENCH PART — assemble in the Engineer Garage</small>' : ''}
         <div class="prodBuy"><span class="prodPrice">${p.price ? '₡' + p.price : 'FREE'}</span>${buy}</div>
       </div>`;
     }).join('') || '<p class="setNote gridEmpty">Nothing here matches.</p>';
@@ -291,6 +292,9 @@ window.ECON = (() => {
     const opts = [{ id: '', label: stockLabel, sub: 'standard issue', color: '#8a8a8a' }];
     if (fam === 'Engine' && window.ENGINEMATH) {
       // engines are BUILT now (Standardization §6.6): the wheel lists your stamped builds
+      if (!ENGINEMATH.builds().length && PARTS.some(p => p.atom && p.fam === 'Engine' && (my[p.id] || 0) > 0))
+        opts.push({ id: '', label: '🔧 your engine parts are at the workbench',
+                    sub: 'Engineer Garage → bench → assemble & stamp, then it lists here', color: '#8fa8e8' });
       for (const b of ENGINEMATH.builds()) {
         const bid = 'build:' + b.id;
         const free = 1 - usedElsewhere(bid, editingId);

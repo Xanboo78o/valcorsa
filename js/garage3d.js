@@ -194,9 +194,9 @@ window.GARAGE3D = (() => {
     const bay = bayState();
     const builds = EM().builds();
     const curEng = bay.k && bay.k.parts && bay.k.parts.Engine;
-    const curB = builds.find(b => b.id === curEng);
+    const curB = builds.find(b => 'build:' + b.id === curEng || b.id === curEng);
     const bayRows = builds.slice(-4).reverse().map(b => {
-      if (b.id === curEng) return `<div class="gRow"><div class="gInfo"><b>⚙️ ${b.name}</b><small>installed · ${b.vp} vp</small></div></div>`;
+      if ('build:' + b.id === curEng || b.id === curEng) return `<div class="gRow"><div class="gInfo"><b>⚙️ ${b.name}</b><small>installed · ${b.vp} vp</small></div></div>`;
       const v = engineVol(b.id);
       const fits = v + (bay.assist ? ASSIST_VOL : 0) <= bay.cap;
       return `<div class="gRow"><div class="gInfo"><b>⚙️ ${b.name}</b><small>${b.designation} · ${b.vp} vp · ${v} units</small></div>
@@ -329,7 +329,7 @@ window.GARAGE3D = (() => {
         const k = activeKart();
         if (k) {
           k.parts = k.parts || {};
-          k.parts.Engine = parts.buildId;
+          k.parts.Engine = 'build:' + parts.buildId;
           saveKart(k);
           const b = EM().builds().find(x => x.id === parts.buildId);
           logReceipt('engine install', b ? b.name : parts.buildId, stripped ? 'mounts stripped' : 'strapped & connected');
@@ -363,8 +363,9 @@ window.GARAGE3D = (() => {
   const ASSIST_VOL = 8;                        // the factory drift-assist unit
   function engineVol(id) {
     if (!id) return 10;                        // stock lump
-    if (String(id).startsWith('b')) {          // a stamped build: size letter + turbo
-      const b = EM().builds().find(x => x.id === id);
+    if (String(id).startsWith('build:') || String(id).startsWith('b')) {   // a stamped build
+      const bid = String(id).replace(/^build:/, '');
+      const b = EM().builds().find(x => x.id === bid);
       if (!b) return 10;
       const sz = (b.designation || 'M')[0];
       return (sz === 'S' ? 12 : sz === 'L' ? 32 : 20) + (b.designation.includes('T') ? 6 : 0);
