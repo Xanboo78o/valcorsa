@@ -110,68 +110,202 @@
     $('loGo').onclick = () => { $('loGo').style.display = 'none'; round = 0; times = []; timesEl.innerHTML = ''; arm(); };
   }
 
-  // ================= THE CALL (radio strategy, bullet time) =================
-  const CALLS = [
-    { q: 'Rain in ~2 laps. Your slicks are cooked. The rival crew just boxed.', c: ['BOX NOW', 'STAY OUT', 'BOX IN 3'], a: 0, why: 'Wets on BEFORE the rain — beat the rush.' },
-    { q: 'P2. The leader brakes earlier into the hairpin every lap.', c: ['DIVE INSIDE', 'WAIT ANOTHER LAP', 'GO AROUND OUTSIDE'], a: 0, why: 'Fading brakes = open door. Send it.' },
-    { q: 'Your racer: "kart pulls right and there\'s a thunky sound."', c: ['PIT — TIRE CHECK', 'PUSH THROUGH', 'IT\'S PROBABLY FUEL'], a: 0, why: 'Pull + thunk is a flat. Every time.' },
-    { q: 'Last lap, you\'re P1. Rival glued to your slipstream on the long straight.', c: ['COVER THE INSIDE', 'DRIFT WIDE', 'BRAKE EARLY'], a: 0, why: 'Make them go the long way round.' },
-    { q: 'El Santo has entered the race. Your rookie asks what to do.', c: ['RACE YOUR OWN RACE', 'CHASE HIM', 'PARK IT'], a: 0, why: 'Nobody chases El Santo and comes back the same.' },
-    { q: 'Fuel: 2 laps in the tank, 3 laps to the flag. Rival has the same problem.', c: ['LIFT AND COAST', 'FULL SEND', 'BOX FOR SPLASH'], a: 0, why: 'Save it. He blinks first.' },
-    { q: 'Smashkart. Crate row ahead. You\'re holding The Saw already.', c: ['SKIP THE CRATES', 'GRAB A CRATE', 'SLOW FOR THE ROW'], a: 0, why: 'Never reroll a good item.' },
-    { q: 'Night race, hard league — your headlights took damage two corners ago.', c: ['FOLLOW A RIVAL\'S GLOW', 'SLOW RIGHT DOWN', 'PIT FOR LIGHTS'], a: 0, why: 'Borrowed light is free light.' },
-    { q: 'Teammate P2, you P3. The crew needs constructor points. Two laps left.', c: ['HOLD STATION', 'FIGHT YOUR TEAMMATE', 'DEMAND A SWAP'], a: 0, why: 'Points over pride. The wall remembers.' },
-    { q: 'Cầu Nổi. The pontoon\'s swaying, boards are wet, kart feels floaty.', c: ['SMOOTH HANDS, EASY THROTTLE', 'HANDBRAKE IT', 'SEND IT FLAT'], a: 0, why: 'Wet wood punishes spikes. Be water.' },
+  // ================= THE CALL v2 (Adam's spec: the radio operator's VIEW) =================
+  // A live race map — your driver BIG, the pitlane, the field. A situation breaks,
+  // time slows TO A STOP (bullet time), you make the call, time snaps back and the
+  // AFTERMATH plays out on the map. Points = correctness + how fast you called it.
+  const SCEN = [
+    { q: 'Rain flag is UP. Your driver’s slicks are cooked. SHOULD YOU PIT?',
+      c: ['BOX BOX BOX', 'STAY OUT', 'ONE MORE LAP'], a: 0, why: 'Wets on BEFORE the rain. Two rivals just found the wall.',
+      good: (S, me) => { S.at(0.2, () => S.pit(me)); S.at(2.2, () => S.crash(S.k[2])); S.at(2.9, () => S.crash(S.k[4])); },
+      bad:  (S, me) => { S.at(1.4, () => S.crash(me)); } },
+    { q: 'YOUR DRIVER CRASHES — rolled off at the corner, kart’s on its side. "The wheels still spin," he says.',
+      c: ['FLIP IT AND SEND', 'CALL THE TOW', 'END THE RACE'], a: 0, why: 'It’s Valcorsa. If the wheels spin, you race.',
+      pre:  (S, me) => S.crash(me),
+      good: (S, me) => { S.at(0.4, () => S.revive(me, 1.08)); },
+      bad:  (S, me) => { /* the tow: he sits there while the country laps him */ } },
+    { q: 'Fuel for 2 laps. THREE laps to the flag. The rival crew has the same problem.',
+      c: ['LIFT AND COAST', 'FULL SEND', 'BOX FOR A SPLASH'], a: 0, why: 'Save it. He blinked first — and then he stopped.',
+      good: (S, me) => { S.slow(me, 0.88); S.slow(S.k[1], 0.86); S.at(2.4, () => S.stop(S.k[1])); },
+      bad:  (S, me) => { S.slow(S.k[1], 0.88); S.at(2.2, () => S.stop(me)); } },
+    { q: 'EL SANTO is 0.8s behind your driver. Two laps left. The theme music is audible.',
+      c: ['LET HIM BY — TAKE THE TOW', 'DEFEND EVERY CORNER', 'PANIC'], a: 0, why: 'Nobody out-defends El Santo. His slipstream is free speed.',
+      santo: true,
+      good: (S, me) => { S.boost(S.santo, 1.3); S.at(0.8, () => S.boost(me, 1.18)); },
+      bad:  (S, me) => { S.boost(S.santo, 1.32); S.at(1.2, () => S.slow(me, 0.86)); } },
+    { q: 'UNDERCUT WINDOW: the leader hasn’t boxed yet. Pit now and you jump him on the exit.',
+      c: ['BOX NOW', 'STAY OUT', 'MIRROR HIM'], a: 0, why: 'The undercut is a knife. You just used it.',
+      good: (S, me) => { S.at(0.2, () => S.pit(me)); S.at(2.6, () => { S.pit(S.k[1]); S.slow(S.k[1], 0.9); }); },
+      bad:  (S, me) => { S.at(1.2, () => { S.pit(S.k[1]); S.boost(S.k[1], 1.12); }); } },
+    { q: 'Contact! Bumper’s hanging off your kart, grinding sparks every corner.',
+      c: ['PIT — TEAR IT OFF', 'PUSH THROUGH', 'SHAKE IT LOOSE'], a: 0, why: 'Eight seconds in the lane beats forty on the track.',
+      good: (S, me) => { S.at(0.2, () => S.pit(me, 0.6)); },
+      bad:  (S, me) => { S.slow(me, 0.93); S.at(1.6, () => S.slow(me, 0.82)); } },
+    { q: 'Your teammate is FLYING, right behind your driver. The crew needs the constructors sweep.',
+      c: ['LET HIM THROUGH', 'HOLD POSITION', 'TELL THEM TO RACE'], a: 0, why: 'The swap cost nothing. Both karts gained. The wall remembers.',
+      mate: true,
+      good: (S, me) => { S.boost(S.mate, 1.22); S.at(1.0, () => { S.boost(me, 1.1); }); },
+      bad:  (S, me) => { S.slow(S.mate, 0.97); S.at(1.5, () => S.boost(S.k[3], 1.25)); } },
   ];
   function call(st) {
-    st.innerHTML = `<h3>THE CALL</h3><p class="fgSub">Six situations. BULLET TIME gives you four seconds each. The crew is listening.</p>
-      <div id="clBox"></div><button id="clGo">PUT ON THE HEADSET</button>`;
-    const box = $('clBox');
-    let deck = [], i = 0, score = 0, raf = 0, deadline = 0;
-    cleanup = () => cancelAnimationFrame(raf);
-    function ask() {
-      if (i >= deck.length) {
+    st.innerHTML = `<h3>THE CALL</h3><p class="fgSub">The pit wall, live. When it breaks, time stops for YOU. Make the call, watch the aftermath.</p>
+      <canvas id="clMap" width="560" height="270"></canvas>
+      <div id="clHud"><p class="clQ"></p><div class="clOpts"></div><p class="clWhy"></p></div>
+      <button id="clGo">PUT ON THE HEADSET</button>`;
+    const cv = $('clMap'), cx = cv.getContext('2d');
+    const qEl = st.querySelector('.clQ'), optsEl = st.querySelector('.clOpts'), whyEl = st.querySelector('.clWhy');
+    const W = cv.width, H = cv.height, CX = W / 2, CY = H / 2 - 6, RX = W * 0.4, RY = H * 0.34;
+    const myName = (JSON.parse(localStorage.getItem('apex_account') || '{}').username || 'YOU').slice(0, 10);
+    const PIT_IN = 0.08, PIT_OUT = 0.42, TAU = Math.PI * 2;
+    let raf = 0, timers = [], deck = [], idx = 0, score = 0, phase = 'idle', ts = 1, tsTarget = 1, frozeAt = 0;
+    const clearT = () => { timers.forEach(clearTimeout); timers = []; };
+    const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+    cleanup = () => { cancelAnimationFrame(raf); clearT(); };
+
+    // ---- the sim ----
+    let S = null;
+    function makeSim(sc) {
+      const k = [];
+      const N = 8;
+      for (let i = 0; i < N; i++) {
+        k.push({ t: (0.55 + i * 0.055) % 1, spd: 0.052 - i * 0.0007, lat: 0, latT: 0, mul: 1,
+                 r: 5, col: ['#e8e8f0', '#c73a2c', '#2e9d63', '#8931d6', '#0fb8c4', '#f2a900', '#d6336c', '#6a7788'][i], spin: 0, dead: false, pitPlan: null });
+      }
+      const me = k[2];                                   // P3-ish: room to gain, room to lose
+      me.r = 9; me.col = '#ff8c1a'; me.me = true; me.spd = 0.0515;
+      const sim = {
+        k, me, fx: [], tl: [],
+        at(sec, fn) { this.tl.push({ at: sec, fn, done: false }); },
+        pit(kart, laneMul) { kart.pitPlan = { laneMul: laneMul || 0.42 }; },
+        crash(kart) { kart.dead = true; kart.latT = -22; },
+        revive(kart, m) { kart.dead = false; kart.latT = 0; kart.mul = m || 1; kart.spin = 0; },
+        stop(kart) { kart.stopped = true; kart.latT = -14; },
+        slow(kart, m) { kart.mul = m; },
+        boost(kart, m) { kart.mul = m; },
+        clock: 0,
+      };
+      if (sc.santo) { const sk = k[3]; sk.col = '#ff7a1a'; sk.santo = true; sk.t = (me.t - 0.03 + 1) % 1; sk.spd = me.spd * 0.99; sim.santo = sk; }
+      if (sc.mate) { const mk = k[4]; mk.col = '#ffd23e'; mk.mate = true; mk.t = (me.t - 0.025 + 1) % 1; mk.spd = me.spd * 1.0; sim.mate = mk; }
+      if (sc.pre) sc.pre(sim, me);
+      return sim;
+    }
+    const pos = (t, lat) => {
+      const a = t * TAU;
+      return [CX + (RX - lat) * Math.cos(a), CY + (RY - lat) * Math.sin(a)];
+    };
+    function stepSim(dt) {
+      S.clock += dt;
+      for (const e of S.tl) if (!e.done && S.clock >= e.at) { e.done = true; e.fn(); }
+      for (const kart of S.k) {
+        if (kart.dead) { kart.spin += dt * 6; }
+        let v = (kart.dead || kart.stopped) ? 0 : kart.spd * kart.mul;
+        // pit routing: dive at PIT_IN, crawl the inner lane, rejoin at PIT_OUT
+        if (kart.pitPlan) {
+          const inLane = kart.t > PIT_IN && kart.t < PIT_OUT;
+          if (inLane) { kart.latT = 26; v *= kart.pitPlan.laneMul; }
+          if (kart.t >= PIT_OUT) { kart.pitPlan = null; kart.latT = 0; }
+        }
+        kart.t = (kart.t + v * dt) % 1;
+        kart.lat += (kart.latT - kart.lat) * Math.min(1, dt * 5);
+      }
+    }
+    function draw() {
+      cx.clearRect(0, 0, W, H);
+      // track ribbon
+      cx.lineWidth = 26; cx.strokeStyle = '#1a2340';
+      cx.beginPath(); cx.ellipse(CX, CY, RX, RY, 0, 0, TAU); cx.stroke();
+      cx.lineWidth = 1.5; cx.strokeStyle = 'rgba(143,168,232,.35)'; cx.setLineDash([6, 8]);
+      cx.beginPath(); cx.ellipse(CX, CY, RX, RY, 0, 0, TAU); cx.stroke(); cx.setLineDash([]);
+      // pit lane (inner, along the bottom-right arc)
+      cx.lineWidth = 8; cx.strokeStyle = 'rgba(46,107,255,.4)';
+      cx.beginPath(); cx.ellipse(CX, CY, RX - 26, RY - 26, 0, PIT_IN * TAU, PIT_OUT * TAU); cx.stroke();
+      cx.fillStyle = '#8fa8e8'; cx.font = '700 9px Poppins, sans-serif'; cx.textAlign = 'center';
+      const [plx, ply] = pos(0.25, 34); cx.fillText('PIT', plx, ply);
+      // start/finish
+      const [sx1, sy1] = pos(0, -14), [sx2, sy2] = pos(0, 14);
+      cx.strokeStyle = '#eef3ff'; cx.lineWidth = 3; cx.setLineDash([4, 3]);
+      cx.beginPath(); cx.moveTo(sx1, sy1); cx.lineTo(sx2, sy2); cx.stroke(); cx.setLineDash([]);
+      // karts (sorted so mine draws on top)
+      for (const kart of [...S.k].sort((a, b) => (a.me ? 1 : 0) - (b.me ? 1 : 0))) {
+        const [x, y] = pos(kart.t, kart.lat);
+        cx.save(); cx.translate(x, y);
+        if (kart.dead) cx.rotate(kart.spin);
+        cx.fillStyle = kart.col;
+        cx.beginPath(); cx.arc(0, 0, kart.r, 0, TAU); cx.fill();
+        if (kart.me) { cx.lineWidth = 2.5; cx.strokeStyle = '#fff'; cx.stroke(); }
+        if (kart.dead) { cx.fillStyle = '#ff3b30'; cx.fillRect(-kart.r, -1.5, kart.r * 2, 3); }
+        cx.restore();
+        if (kart.me) { cx.fillStyle = '#ff8c1a'; cx.font = '800 10px Poppins, sans-serif'; cx.fillText(myName, x, y - 14); }
+        if (kart.santo) { cx.fillStyle = '#ff7a1a'; cx.font = '800 8px Poppins, sans-serif'; cx.fillText('EL SANTO', x, y - 11); }
+        if (kart.mate) { cx.fillStyle = '#ffd23e'; cx.font = '800 8px Poppins, sans-serif'; cx.fillText('TEAMMATE', x, y - 11); }
+      }
+      // bullet time wash
+      if (ts < 0.9) {
+        cx.fillStyle = `rgba(20,40,110,${(0.9 - ts) * 0.4})`; cx.fillRect(0, 0, W, H);
+        cx.fillStyle = `rgba(238,243,255,${0.5 + Math.sin(performance.now() / 180) * 0.3})`;
+        cx.font = '900 15px "Archivo Black", sans-serif';
+        cx.save(); cx.translate(W - 74, 22); cx.transform(1, 0, -0.14, 1, 0, 0); cx.fillText('BULLET TIME', 0, 0); cx.restore();
+      }
+    }
+    let lastT = 0;
+    function loop(t) {
+      const dt = Math.min(0.05, (t - lastT) / 1000 || 0.016); lastT = t;
+      ts += (tsTarget - ts) * Math.min(1, dt * (tsTarget < ts ? 1.8 : 3.5));   // slow eases in, resume SNAPS
+      if (S) { stepSim(dt * ts); draw(); }
+      raf = requestAnimationFrame(loop);
+    }
+
+    // ---- round flow: breathe → freeze → call → aftermath → verdict ----
+    function round() {
+      if (idx >= deck.length) {
         const isBest = best('vc_fun_calls', score, false);
-        box.innerHTML = `<p class="clDone">${score} pts. ${isBest ? 'PERSONAL BEST — the tower salutes.' : score >= 500 ? 'Cold blood. Real pit-wall material.' : 'Static on the line. Run it back.'}</p>`;
+        qEl.innerHTML = `<b>${score} pts.</b> ${isBest ? 'PERSONAL BEST — the tower salutes.' : score >= 700 ? 'Cold blood. Real pit-wall material.' : 'Static on the line. Run it back.'}`;
+        optsEl.innerHTML = ''; whyEl.textContent = '';
         $('clGo').style.display = '';
         return;
       }
-      const s = deck[i];
-      const order = [0, 1, 2].sort(() => Math.random() - 0.5);
-      box.innerHTML = `<p class="clQ">${s.q}</p>
-        <div class="clBar"><i></i></div>
-        <div class="clOpts">${order.map(o => `<button data-o="${o}">${s.c[o]}</button>`).join('')}</div>
-        <p class="clWhy"></p>`;
-      const bar = box.querySelector('.clBar i');
-      deadline = performance.now() + 4000;
-      const tickBar = () => {
-        const left = deadline - performance.now();
-        bar.style.width = Math.max(0, left / 40) + '%';
-        if (left <= 0) return verdict(-1);
-        raf = requestAnimationFrame(tickBar);
-      };
-      raf = requestAnimationFrame(tickBar);
-      box.querySelectorAll('[data-o]').forEach(b => b.onclick = () => verdict(+b.dataset.o));
-      function verdict(pick) {
-        cancelAnimationFrame(raf);
-        const right = pick === s.a;
-        const bonus = right ? Math.round(Math.max(0, deadline - performance.now()) / 40) : 0;
-        if (right) score += 100 + bonus;
-        box.querySelectorAll('[data-o]').forEach(b => {
-          if (+b.dataset.o === s.a) b.classList.add('right');
+      const sc = deck[idx];
+      S = makeSim(sc);
+      ts = 1; tsTarget = 1; phase = 'breathe';
+      qEl.textContent = 'The race is green…'; optsEl.innerHTML = ''; whyEl.textContent = '';
+      later(1600, () => {
+        phase = 'frozen'; tsTarget = 0.02; frozeAt = performance.now();
+        qEl.textContent = sc.q;
+        const order = [0, 1, 2].sort(() => Math.random() - 0.5);
+        optsEl.innerHTML = order.map(o => `<button data-o="${o}">${sc.c[o]}</button>`).join('');
+        optsEl.querySelectorAll('[data-o]').forEach(b => b.onclick = () => decide(+b.dataset.o));
+        later(7000, () => { if (phase === 'frozen') decide(-1); });   // dead air = a call too
+      });
+      function decide(pick) {
+        if (phase !== 'frozen') return;
+        phase = 'aftermath';
+        const sec = (performance.now() - frozeAt) / 1000;
+        const right = pick === sc.a;
+        optsEl.querySelectorAll('[data-o]').forEach(b => {
+          if (+b.dataset.o === sc.a) b.classList.add('right');
           else if (+b.dataset.o === pick) b.classList.add('wrong');
           b.disabled = true;
         });
-        box.querySelector('.clWhy').textContent = (pick === -1 ? 'Silence on the radio is also a call. A bad one. ' : '') + s.why + (right ? '  +' + (100 + bonus) : '');
-        i++;
-        setTimeout(ask, 1600);
+        tsTarget = 1.8;                                    // time snaps back — watch the map
+        S.clock = 0; S.tl = [];
+        (right ? sc.good : sc.bad)(S, S.me);
+        qEl.textContent = right ? 'GOOD CALL — watch it play out…' : 'The wall goes quiet…';
+        later(3800, () => {
+          const bonus = right ? Math.max(0, 120 - Math.round(sec * 20)) : 0;
+          if (right) score += 100 + bonus;
+          whyEl.textContent = (pick === -1 ? 'Silence on the radio is also a call. A bad one. ' : '') + sc.why +
+            (right ? `  +${100 + bonus} (call took ${sec.toFixed(1)}s)` : `  (call took ${sec.toFixed(1)}s)`);
+          idx++;
+          later(2100, round);
+        });
       }
     }
     $('clGo').onclick = () => {
       $('clGo').style.display = 'none';
-      deck = [...CALLS].sort(() => Math.random() - 0.5).slice(0, 6);
-      i = 0; score = 0;
-      ask();
+      deck = [...SCEN].sort(() => Math.random() - 0.5).slice(0, 5);
+      idx = 0; score = 0;
+      if (!raf) { lastT = performance.now(); raf = requestAnimationFrame(loop); }
+      round();
     };
   }
 
