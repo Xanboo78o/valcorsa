@@ -70,6 +70,10 @@
     if (dash > 90) {                             // a proper accident
       d.engine = Math.max(0.25, d.engine - (dash - 90) / 260);
       if (!d.flat && dash > 120 && Math.random() < 0.35) goFlat(car);
+      if (!d.bumper && dash > 100 && Math.random() < 0.6) {
+        d.bumper = Math.random() < 0.5 ? -1 : 1;      // the bumper tears loose and DRAGS
+        if (car.isPlayer) toast('Bumper’s hanging — hear it grinding?');
+      }
       bump(car, 0.5);
       if (car.isPlayer) sfx(70, 0.3, 0.4);
     } else {                                     // a scrape
@@ -106,16 +110,26 @@
     if (d.engine < 1) {
       throttle *= 0.55 + 0.45 * d.engine;
       d.stut -= dt;
-      if (d.engine < 0.65 && d.stut <= 0) {           // the cough
-        d.stut = 0.4 + Math.random() * 1.2;
+      if (d.cutT > 0) {                               // mid-dropout: the pedal is DEAD
+        d.cutT -= dt;
         throttle = 0;
-        if (car.isPlayer) sfx(65, 0.08, 0.25);
+      } else if (d.engine < 0.85 && d.stut <= 0) {    // the dropout hits — anywhere, anytime
+        d.stut = 1.2 + Math.random() * 3.2 * d.engine;   // sicker engine = more often
+        d.cutT = 0.22 + (1 - d.engine) * 0.55;           // …and longer
+        car._bang = true;                                // speedfx: backfire puff + sparks
+        if (car.isPlayer) { sfx(38, 0.14, 0.5); camShake = Math.max(camShake, 0.25); }
       }
     }
     if (d.flat) {
-      steer += Math.sin(performance.now() / 90) * 0.3;     // wiggly steering
-      throttle *= 0.86;
-      if (car.isPlayer && camShake < 0.1) camShake = 0.1;  // joggly screen
+      if (!d.pull) d.pull = Math.random() < 0.5 ? -1 : 1;
+      steer += d.pull * 0.16 + Math.sin(performance.now() / 90) * 0.22;  // it PULLS — hold against it
+      throttle *= 0.78;
+      d.thT = (d.thT || 0) - dt;
+      if (d.thT <= 0 && speed > 6) {                  // thump… thump… thump…
+        d.thT = 2.9 / Math.max(6, speed);
+        if (car.isPlayer) { sfx(52, 0.05, 0.3); camShake = Math.max(camShake, 0.16); }
+      }
+      if (car.isPlayer && camShake < 0.1) camShake = 0.1;
     }
     return { ...input, throttle, steer };
   }
