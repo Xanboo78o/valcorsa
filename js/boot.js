@@ -22,7 +22,7 @@ const SCRIPTS = ['js/config.js', 'js/palette.js', 'js/tracks.js', 'js/citydata.j
                  'js/rallyhouse.js', 'js/main.js', 'js/items.js', 'js/damage.js', 'js/parts.js',
                  'js/enginecat.js', 'js/particons.js', 'js/economy.js', 'js/city.js', 'js/garage3d.js',
                  'js/touch.js', 'js/roar.js', 'js/net.js', 'js/schedule.js', 'js/league.js', 'js/arena.js',
-                 'js/shell.js', 'js/hotlap.js', 'js/radio.js', 'js/flex.js', 'js/billboards.js'];
+                 'js/season.js', 'js/shell.js', 'js/hotlap.js', 'js/radio.js', 'js/flex.js', 'js/billboards.js'];
 for (const src of SCRIPTS) {
   await new Promise((res, rej) => {
     const s = document.createElement('script');

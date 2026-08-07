@@ -18,9 +18,17 @@ window.SCHED = (() => {
   ];
 
   function todays(d = new Date()) {
+    // rendezvous hashing: every track scores against the (day, slot) and the top
+    // score wins. Adding new venues no longer reshuffles the whole calendar —
+    // an existing pick only changes if the NEW track itself outscores it.
     const key = dayKey(d), pool = TRACKS.filter(t => !t.stage);
+    const picked = [];
     return SLOTS.map((s, i) => {
-      const def = pool[h(key + ':' + i) % pool.length];
+      const def = pool
+        .filter(t => !picked.includes(t.id))         // no venue twice in one day
+        .map(t => ({ t, sc: h(key + ':' + i + ':' + t.id) }))
+        .sort((a, b) => b.sc - a.sc)[0].t;
+      picked.push(def.id);
       const at = new Date(d); at.setHours(s.hh, s.mm, 0, 0);
       return { slot: i, label: s.label, open: !!s.open, def, at,
                room: 'VD' + (h(key + ':' + i + ':' + def.id) % 10000).toString().padStart(4, '0') };
@@ -101,5 +109,5 @@ window.SCHED = (() => {
   }
   boot();
 
-  return { todays, nextRace };
+  return { todays, nextRace, enter: enterScheduled };
 })();

@@ -1755,3 +1755,72 @@ body.tabsOn #shopModal .storeFront { max-height: calc(100dvh - 92px); margin-bot
 #standingsBody td:nth-child(3) { color: var(--st-orange-hot); font-weight: 800; }
 #standingsBody tr.me { background: rgba(46,107,255,.22); }
 #menu .m-arena { background: rgba(6,11,24,.7); color: #ff5ce1; border-color: rgba(255,92,225,.5); }
+
+/* ═══ V26 THE SEASON SCREEN — broadcast graphics on paper. The one LIGHT page
+   in the Storm app: schedule, the map of the nation, contenders, races run. ═══ */
+#seasonScreen { display: none; position: fixed; inset: 0; z-index: 71;
+  background: linear-gradient(180deg, #eef2f8 0%, #e3eaf4 100%);
+  color: #16233c; overflow-y: auto; font-family: 'Poppins', sans-serif; }
+.ssInner { max-width: 940px; margin: 0 auto; padding: 14px 16px calc(96px + env(safe-area-inset-bottom)); }
+.ssHead { display: flex; align-items: center; gap: 12px; padding: 10px 0 6px; }
+#ssClose { width: 38px; height: 38px; flex: none; background: #fff; color: #16233c;
+  border: 1.5px solid #16233c; border-radius: 0; font-size: 15px; font-weight: 700; }
+.ssTitle { flex: 1; min-width: 0; }
+.ssTitle b { display: block; font-family: 'Archivo Black', sans-serif; font-size: clamp(17px, 4vw, 26px);
+  letter-spacing: 1.5px; color: #16233c; }
+.ssTitle span { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #5a6d8e; text-transform: uppercase; }
+.ssLeague { display: flex; gap: 5px; }
+.ssLeague button { background: #fff; color: #16233c; border: 1.5px solid #16233c; border-radius: 0;
+  font-family: 'Archivo Black', sans-serif; font-size: 10px; letter-spacing: 1px; padding: 8px 12px; }
+.ssLeague button.sel { background: #16233c; color: #fff; }
+.ssSection { font-family: 'Archivo Black', sans-serif; font-size: 11px; letter-spacing: 3px;
+  color: #5a6d8e; margin: 18px 0 8px; }
+/* today strip */
+#ssSlots { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+#ssSlots::-webkit-scrollbar { display: none; }
+.ssRace { flex: 1 0 210px; background: #fff; border: 1.5px solid #16233c; border-radius: 0;
+  outline: 1px solid rgba(22,35,60,.25); outline-offset: 3px;
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 3px; }
+.ssRace.live { border-color: #e07000; outline-color: rgba(224,112,0,.5);
+  box-shadow: 0 0 16px rgba(224,112,0,.25); }
+.ssRace.done { opacity: .55; }
+.ssLabel { font-family: 'Archivo Black', sans-serif; font-size: 12.5px; letter-spacing: 1px; }
+.ssTrack { font-size: 13px; font-weight: 700; color: #2c3e60; }
+.ssMode { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: #5a6d8e; text-transform: uppercase; }
+.ssWhen { font-family: 'Archivo Black', sans-serif; font-size: 13px; color: #e07000;
+  font-variant-numeric: tabular-nums; }
+.ssRace button { margin-top: 7px; background: linear-gradient(180deg, #ff9e33, #ee7f00);
+  border: none; border-radius: 0; color: #1d0e00; font-family: 'Archivo Black', sans-serif;
+  font-size: 11px; letter-spacing: 1px; padding: 9px; box-shadow: 0 2px 0 #a85400;
+  outline: 1.5px solid rgba(22,35,60,.5); outline-offset: 2px; }
+/* the map */
+#ssMap { background: #fff; border: 1.5px solid #16233c; outline: 1px solid rgba(22,35,60,.25);
+  outline-offset: 3px; padding: 6px; }
+#vcMap { display: block; width: 100%; height: auto; }
+#vcMap .sea { fill: #d5e3f0; }
+#vcMap .land { fill: #fbfcfe; stroke: #16233c; stroke-width: 1.6; }
+#vcMap .mp circle, #vcMap .mpCap circle, #vcMap .mpHoly circle { fill: #16233c; }
+#vcMap .mpCap circle { fill: #e07000; }
+#vcMap .mpHoly circle { fill: #b8860b; }
+#vcMap text { font-family: 'Poppins', sans-serif; font-size: 8.5px; font-weight: 700;
+  fill: #2c3e60; text-anchor: middle; }
+#vcMap .mpCap text { font-family: 'Archivo Black', sans-serif; font-size: 9.5px; fill: #16233c; }
+#vcMap .mpToday circle { fill: #e07000; }
+#vcMap .pulse { fill: none; stroke: #e07000; stroke-width: 1.5; animation: mapPulse 1.6s ease-out infinite; }
+@keyframes mapPulse { 0% { opacity: .9; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.5); } }
+#vcMap .pulse { transform-origin: center; transform-box: fill-box; }
+#vcMap .tourLine { fill: none; stroke: #e07000; stroke-width: 1.6; stroke-dasharray: 5 4; opacity: .7; }
+#vcMap .mapTitle { font-size: 8px; letter-spacing: 2px; fill: #8ba0c0; text-anchor: start;
+  font-family: 'Archivo Black', sans-serif; }
+/* contenders + recent */
+.ssCols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .ssCols { grid-template-columns: 1fr; } }
+.ssRow { display: flex; align-items: center; gap: 10px; background: #fff;
+  border: 1.5px solid rgba(22,35,60,.35); border-radius: 0; padding: 8px 12px; margin-bottom: 6px; }
+.ssRow i { font-style: normal; font-family: 'Archivo Black', sans-serif; font-size: 13px;
+  color: #5a6d8e; width: 22px; text-align: center; }
+.ssRow b { flex: 1; font-size: 13.5px; }
+.ssRow span { font-family: 'Archivo Black', sans-serif; font-size: 12px; color: #e07000; }
+.ssRow small { font-size: 9.5px; color: #5a6d8e; font-weight: 700; }
+.ssRow.me { background: #e3edfb; border-color: #16233c; }
+.ssNote { font-size: 12px; color: #5a6d8e; font-style: italic; }
