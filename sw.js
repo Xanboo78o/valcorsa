@@ -3,8 +3,8 @@
    - Music/SFX/fonts/icons: CACHE-FIRST in a persistent cache that survives deploys —
      these files never change, and re-downloading ~15MB of music every session is what
      blew the Netlify bandwidth cap (2026-08-07, site went 503 usage_exceeded). */
-const CACHE = 'valcorsa-v40';
-const MEDIA = 'valcorsa-media-v2';          // v2: original OST replaced the CC soundtrack (2026-08-07)
+const CACHE = 'valcorsa-v41';
+const MEDIA = 'valcorsa-media-v3';          // v3: app icon is THE FLAG now (2026-08-07)
 const IMMUTABLE = /\/(music|sfx|fonts|icons)\//;   // no ^ anchor: site may live under /valcorsa/ (GitHub Pages)
 
 self.addEventListener('install', e => self.skipWaiting());
