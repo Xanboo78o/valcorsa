@@ -151,6 +151,11 @@
     formula:{ s: 'eng5', lo: 0.72, hi: 2.35, fMul: 1.60, sub: 0.24, bright: 2600, turbo: 0 },   // the scream
     kart:   { s: 'eng4', lo: 0.82, hi: 2.10, fMul: 1.80, sub: 0.18, bright: 2100, turbo: 0 },   // 2-stroke buzz
     bike:   { s: 'eng5', lo: 0.88, hi: 2.50, fMul: 2.00, sub: 0.14, bright: 2400, turbo: 0 },
+    monoposto: { s: 'eng5', lo: 0.75, hi: 2.60, fMul: 1.72, sub: 0.22, bright: 2800, turbo: 0 },   // the pinnacle scream
+    endurance: { s: 'eng3', lo: 0.56, hi: 1.90, fMul: 1.05, sub: 0.50, bright: 1400, turbo: 1.6 }, // October turbo drone
+    barrel:    { s: 'eng4', lo: 0.80, hi: 2.00, fMul: 1.70, sub: 0.20, bright: 1900, turbo: 0 },   // clatter in a cask
+    longframe: { s: 'eng0', lo: 0.48, hi: 1.50, fMul: 0.80, sub: 0.80, bright: 800,  turbo: 1 },   // TWO of them
+    sofa:      { s: 'eng1', lo: 0.44, hi: 1.20, fMul: 0.58, sub: 0.60, bright: 500,  turbo: 0 },   // upholstered putt-putt
   };
   // The GT bank: one real V8 (Adam's Ford GT reference) sliced into steady-RPM
   // loops — the sim-racer way (Assetto/iRacing: crossfade recorded loops by rpm,

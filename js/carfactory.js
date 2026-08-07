@@ -6,9 +6,11 @@
    Public API: KIT (player's saved kit), randomKit(), buildKitMesh(kit, helmetColor). */
 'use strict';
 
-const CHASSIS = ['gt', 'muscle', 'rally', 'formula', 'truck', 'kart', 'bike'];
+const CHASSIS = ['gt', 'muscle', 'rally', 'formula', 'truck', 'kart', 'bike',
+                 'monoposto', 'endurance', 'barrel', 'longframe', 'sofa'];
 // Valcorsan showroom — every chassis is a factory car from an in-world marque.
-const CHASSIS_LABELS = { gt: '🏎️ Enginos GT', muscle: '🚗 Houndsborough Iron', rally: '🚙 Heiligen Strada', formula: '🏁 Enginos Volante F', truck: '🛻 Norte Titan', kart: '🛞 Granada Sprint Kart', bike: '🏍️ Perro Moto' };
+const CHASSIS_LABELS = { gt: 'Enginos GT', muscle: 'Houndsborough Iron', rally: 'Heiligen Strada', formula: 'Enginos Volante F', truck: 'Norte Titan', kart: 'Granada Sprint Kart', bike: 'Perro Moto',
+                         monoposto: 'F1 Monoposto', endurance: 'Heiligen Endurance', barrel: 'Barrel Kart', longframe: 'Twin-Engine Longframe', sofa: 'The Sofa' };
 const WHEEL_STYLES = ['sport', 'classic', 'deep', 'offroad', 'neon'];
 const WHEEL_LABELS = { sport: 'Sport 5-spoke', classic: 'Classic steel', deep: 'Gold deep-dish', offroad: 'Off-road knobby', neon: 'Neon glow' };
 const DECALS = ['none', 'stripes', 'number', 'flames', 'checker'];

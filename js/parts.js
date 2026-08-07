@@ -121,11 +121,11 @@ window.PARTS = (() => {
     ['Heiligen Strada', 'solid', 'coast-road bones'], ['Enginos Volante F', 'rare', 'the flyer'],
     ['Norte Titan', 'solid', 'heavy is a feature'], ['Granada Sprint Kart', 'common', 'the starter dream'],
     ['Perro Moto', 'common', 'barks at corners'],
-    ['F1 Monoposto', 'legendary', 'the pinnacle. arrives with the sim core.'],
-    ['Heiligen Endurance Frame', 'legendary', 'built for October. arrives with the sim core.'],
-    ['Barrel Kart', 'rare', 'it’s a barrel. arrives with the sim core.'],
-    ['Twin-Engine Longframe', 'legendary', 'why. arrives with the sim core.'],
-    ['The Sofa', 'rare', 'comfort-first engineering. arrives with the sim core.'],
+    ['F1 Monoposto', 'legendary', 'the pinnacle'],
+    ['Heiligen Endurance Frame', 'legendary', 'built for October'],
+    ['Barrel Kart', 'rare', 'it’s a barrel'],
+    ['Twin-Engine Longframe', 'legendary', 'why'],
+    ['The Sofa', 'rare', 'comfort-first engineering'],
   ]) add('Chassis', 'ChanesChassis', name, rar, 90, { weight: Math.round(v(name, 40, 120)) }, note);
 
   // ---- CONSUMABLES (the floor of the whole economy) ----

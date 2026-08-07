@@ -270,7 +270,9 @@ window.ECON = (() => {
   }
   const CH_MAP = { 'Enginos GT': 'gt', 'Houndsborough Iron': 'muscle', 'Heiligen Strada': 'rally',
                    'Enginos Volante F': 'formula', 'Norte Titan': 'truck',
-                   'Granada Sprint Kart': 'kart', 'Perro Moto': 'bike' };
+                   'Granada Sprint Kart': 'kart', 'Perro Moto': 'bike',
+                   'F1 Monoposto': 'monoposto', 'Heiligen Endurance Frame': 'endurance',
+                   'Barrel Kart': 'barrel', 'Twin-Engine Longframe': 'longframe', 'The Sofa': 'sofa' };
   function ownedChassis() {   // you START with the Enginos GT; the rest are earned
     const my = inv(), set = new Set(['gt']);
     for (const p of PARTS)

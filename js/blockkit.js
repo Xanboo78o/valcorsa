@@ -302,24 +302,33 @@
       wheel(-1.0, 1.45, 1, 0.52, 0.5); wheel(1.0, 1.45, 1, 0.52, 0.5);
       wheel(-1.0, -1.45, 0, 0.52, 0.5); wheel(1.0, -1.45, 0, 0.52, 0.5);
 
-    } else if (vehicle === 'bike') {          // Perro Moto: tank curve, tail wedge
+    } else if (vehicle === 'bike') {          // Perro Moto: the dog, properly drawn this time
       weld(g, M, [
-        ['c', 'paint', 0, 0.7, -0.1, 0.34, 0.4, 1.55],             // spine
-        ['q', 'paint', 0, 0.94, 0.18, 0.38, 0.3, 0.6, 2],             // tank curve (faces forward)
-        ['w', 'paint', 0, 0.98, -0.75, 0.36, 0.28, 0.6],           // tail wedge
-        ['w', 'paint', 0, 0.72, 0.85, 0.48, 0.34, 0.5],            // front fairing slope
-        ['w', 'glass', 0, 1.0, 0.72, 0.32, 0.26, 0.32],            // screen
-        ['c', 'dark', 0, 0.94, -0.45, 0.4, 0.12, 0.8],             // seat
+        ['c', 'paint', 0, 0.66, -0.2, 0.3, 0.32, 1.6],             // frame spine
+        ['q', 'paint', 0, 0.95, 0.28, 0.4, 0.32, 0.72, 2],         // THE tank curve (bigger, obvious)
+        ['c', 'dark', 0, 0.46, -0.15, 0.38, 0.34, 0.9],            // engine block
+        ['c', 'dark', 0, 0.86, -0.6, 0.38, 0.1, 0.7],              // seat pad
+        ['w', 'paint', 0, 1.0, -1.02, 0.36, 0.3, 0.65, 2],         // tail up-kick wedge
+        ['w', 'paint', 0, 0.8, 0.95, 0.46, 0.4, 0.6],              // front fairing slope
+        ['w', 'glass', 0, 1.1, 0.78, 0.3, 0.28, 0.35],             // screen
+        ['a', 'paint', 0, 0.6, 1.3, 0.24, 1.15, 1.15],             // front fender
+        ['a', 'paint', 0, 0.58, -1.3, 0.26, 1.18, 1.18],           // rear hugger
       ]);
-      add(new THREE.BoxGeometry(0.7, 0.05, 0.08), dark, 0, 1.0, 0.95);
-      add(new THREE.CylinderGeometry(0.04, 0.04, 0.9, 6), dark, 0, 0.82, 0.9, Math.PI / 2.6);
-      add(new THREE.BoxGeometry(0.42, 0.7, 0.42), dark, 0, 1.05, -0.1, -0.5);
-      add(new THREE.SphereGeometry(0.27, 10, 8), helmetMat, 0, 1.35, 0.35);
-      add(new THREE.BoxGeometry(0.16, 0.5, 0.16), dark, -0.3, 1.0, 0.5, 0, 0, 0.5);
-      add(new THREE.BoxGeometry(0.16, 0.5, 0.16), dark, 0.3, 1.0, 0.5, 0, 0, -0.5);
-      lamp('head', 0, 0.7, 1.12, 0.18, 0.14); lamp('tail', 0, 0.9, -1.05, 0.16, 0.1);
-      wheel(0, 1.25, 1, 0.5, 0.24);
-      wheel(0, -1.25, 0, 0.5, 0.28);
+      for (const sx of [-1, 1]) {
+        add(new THREE.CylinderGeometry(0.045, 0.045, 0.8, 6), dark, sx * 0.14, 0.88, 1.02, 0.42);   // raked fork legs
+        add(new THREE.BoxGeometry(0.06, 0.07, 0.75), dark, sx * 0.13, 0.5, -0.85);                  // swingarm
+      }
+      add(new THREE.BoxGeometry(0.66, 0.05, 0.07), dark, 0, 1.2, 0.7);                              // handlebar
+      add(new THREE.CylinderGeometry(0.05, 0.075, 0.8, 6), dark, 0.2, 0.82, -1.0, 1.15);            // upswept megaphone
+      add(new THREE.BoxGeometry(0.42, 0.6, 0.44), dark, 0, 1.06, -0.32, -0.55);                     // tucked torso
+      add(new THREE.SphereGeometry(0.27, 10, 8), helmetMat, 0, 1.34, 0.1);
+      add(new THREE.BoxGeometry(0.14, 0.46, 0.14), dark, -0.27, 0.98, 0.4, 0, 0, 0.6);              // arms to the bars
+      add(new THREE.BoxGeometry(0.14, 0.46, 0.14), dark, 0.27, 0.98, 0.4, 0, 0, -0.6);
+      add(new THREE.BoxGeometry(0.13, 0.4, 0.3), dark, -0.25, 0.62, -0.4, 0.3);                     // legs gripping the tank
+      add(new THREE.BoxGeometry(0.13, 0.4, 0.3), dark, 0.25, 0.62, -0.4, 0.3);
+      lamp('head', 0, 0.84, 1.28, 0.18, 0.16); lamp('tail', 0, 1.04, -1.34, 0.16, 0.1);
+      wheel(0, 1.25, 1, 0.5, 0.22);
+      wheel(0, -1.25, 0, 0.5, 0.26);
 
     } else if (vehicle === 'monster') {       // Norte Titan: slab frame, wedge cab, curve nose
       weld(g, M, [
