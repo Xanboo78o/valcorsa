@@ -95,7 +95,7 @@
   function onRaceBuilt() {
     crates = []; tires = [];
     updateItemBox(null);
-    active = !track.open && track.def && track.def.mode === 'SMASHKART';
+    active = !track.open && track.def && (track.def.mode === 'SMASHKART' || track.def.arena);
     if (!active) return;
     const { samples, rights, N, halfW } = track;
     for (let l = 0; l < CRATE_LINES; l++) {

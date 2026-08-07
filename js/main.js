@@ -975,6 +975,7 @@ function buildTrack(def) {
   buildEnvironment(def, env);
   buildMinimap(def);
   if (window.ITEMS) ITEMS.onRaceBuilt();    // Smashkart supply crates (items.js)
+  if (window.ARENA) ARENA.onRaceBuilt();    // arena games (derby: last kart rolling)
   if (window.DMG) DMG.reset();              // fresh sheet metal every race (damage.js)
   rebuildPostFX();                          // composer wraps the new scene
 }
@@ -2529,6 +2530,7 @@ function renderResults() {
   box.scrollTop = st;
 }
 function endRace() {                                    // the player's race is over -> open the live board
+  if (window.ARENA && ARENA.active) return;             // arenas end their own way (last kart rolling)
   if (window.NET && NET.phase === 'racing')
     NET.reportFinish(player.finishTime || raceTime, player.lap);
   // scheduled (VD####) rooms are LEAGUE races: your full-field finish banks points
@@ -3355,6 +3357,8 @@ function loop() {
                     handbrake: (keys[' '] || (window.TOUCH && TOUCH.hb)) ? 1 : 0 };
         } else if (car.traffic) {
           input = trafficInputs(car);              // open-world civilians pootling about
+        } else if (window.ARENA && ARENA.active && !car.dnf) {
+          input = ARENA.derbyInputs(car);            // arena bots hunt, they don't lap
         } else if (car.finished) {
           input = aiInputs(car); input.throttle = Math.min(input.throttle, 0.4);
         } else {
@@ -3380,6 +3384,7 @@ function loop() {
       collideCars(sub);
     }
     if (window.ITEMS) ITEMS.update(dt);
+    if (window.ARENA) ARENA.update(dt);
     if (window.DMG) DMG.update(dt);
     updateCarVisuals(dt);
     updateHUD();

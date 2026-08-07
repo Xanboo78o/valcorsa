@@ -1754,3 +1754,4 @@ body.tabsOn #shopModal .storeFront { max-height: calc(100dvh - 92px); margin-bot
 #standingsBody td:first-child { font-family: 'Archivo Black', sans-serif; width: 34px; color: #8fa8e8; }
 #standingsBody td:nth-child(3) { color: var(--st-orange-hot); font-weight: 800; }
 #standingsBody tr.me { background: rgba(46,107,255,.22); }
+#menu .m-arena { background: rgba(6,11,24,.7); color: #ff5ce1; border-color: rgba(255,92,225,.5); }

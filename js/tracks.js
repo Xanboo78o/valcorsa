@@ -74,6 +74,23 @@ const TRACKS = [
     ],
   },
   {
+    // ARENA 1 — the Bullring. A walled disc (fat circle: width > radius = full floor).
+    // Native game: DEMO DERBY — last kart rolling. The rotating playlist starts here.
+    id: 'bullring',
+    name: 'La Plaza de Granada',
+    mode: 'ARENA',
+    arena: 'derby',
+    desc: 'The Bullring. No laps, no lines, no mercy — twelve karts walk in, one drives out. The south\'s favorite Sunday.',
+    width: 116,
+    hills: 0,
+    surface: 'asphalt',
+    env: 'desert',
+    laps: 99,
+    walls: true,
+    points: (() => { const p = []; for (let i = 0; i < 20; i++) {
+      const a = i / 20 * Math.PI * 2; p.push([Math.cos(a) * 60, Math.sin(a) * 60, 0]); } return p; })(),
+  },
+  {
     id: 'perrosaltarin',
     name: 'Cañón del Perro Saltarín',
     mode: 'SMASHKART',
@@ -147,6 +164,36 @@ const TRACKS = [
       [-260, -150, 8], [-280, -50, 6], [-220, 30, 4],             // the market esses
       [-260, 120, 7], [-190, 190, 5], [-80, 200, 3],
       [10, 160, 2], [60, 90, 1],                                  // chapel chicane home
+    ],
+  },
+  {
+    // FORGE 1 of 32 — 10-Q session (TRACKS-QA.md). The rally school.
+    id: 'hennenhof',
+    name: 'Hennenhof',
+    mode: 'RALLY',
+    desc: '"Where the kids learn." All gravel: five switchbacks up the Ladder, straight through the barn (the chickens are fine), kind as a grandmother — except Der Biss.',
+    width: 26,
+    hills: 0.5,
+    surface: 'dirt',
+    env: 'forest',
+    laps: 1,
+    stage: true,
+    points: [
+      // valley run-out (confidence first)
+      [0, 0, 0], [140, -10, 3], [260, 10, 8], [360, -20, 14],
+      // THE LADDER — five switchbacks stacked up the face
+      [440, 10, 20], [380, 60, 26], [470, 100, 32], [400, 150, 38], [490, 190, 44],
+      [430, 240, 50],
+      // ridge shoulder
+      [520, 300, 54], [610, 290, 52],
+      // THE BARN CHICANE (through the Hennenhof barn — doors open both ends)
+      [680, 330, 50], [720, 310, 49], [760, 340, 48],
+      // high meadow sweep
+      [850, 330, 44], [930, 370, 38],
+      // DER BISS — the downhill tightener that ends first rallies
+      [990, 320, 32], [1000, 250, 26], [950, 210, 22],
+      // the descent home, east side
+      [1010, 140, 16], [980, 50, 10], [890, 0, 6], [770, -30, 3], [650, 0, 1], [540, -30, 0],
     ],
   },
   {
