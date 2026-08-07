@@ -2021,3 +2021,57 @@ body.tabsOn #teamsScreen .tmScroll { padding-bottom: 90px; }
 #tmJoin, #tmLeave { background: rgba(46,107,255,.15) !important; color: #eef3ff !important;
   border: 1.5px solid #2e6bff !important; font-weight: 800; padding: 12px !important; }
 #tmLeave { border-color: rgba(199,58,44,.7) !important; color: #ff9d94 !important; }
+
+/* ==== V20 DEPARTMENT OF FUN (role minigames) ==== */
+#funGames { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 4px 0 16px; width: 100%; }
+.fgCard { background: rgba(8,14,30,.85); border: 1.5px solid rgba(46,107,255,.45); padding: 14px;
+  cursor: pointer; text-align: left; transition: transform .12s; }
+.fgCard:active { transform: scale(.97); }
+.fgCard b { display: block; font-family: 'Archivo Black', sans-serif; font-size: 15px; letter-spacing: .05em; color: #fff; }
+.fgCard span { font-size: 9px; letter-spacing: .16em; color: #ff8c1a; }
+.fgCard p { font-size: 11px; color: #8fa8e8; line-height: 1.4; margin: 6px 0 4px; }
+.fgCard em { font-style: normal; font-size: 10px; color: #2e9d63; }
+.fgCard.mgr { border-style: dashed; opacity: .9; }
+#funGame { position: fixed; inset: 0; z-index: 120; background: linear-gradient(180deg, #070d20, #101c44);
+  display: flex; align-items: center; justify-content: center; }
+#fgClose { position: absolute; top: 12px; right: 14px; min-width: 0 !important; padding: 8px 14px !important; }
+#fgStage { text-align: center; max-width: min(560px, 92vw); width: 100%; max-height: 92vh; overflow-y: auto; }
+#fgStage h3 { font-family: 'Archivo Black', sans-serif; font-size: 26px; letter-spacing: .08em; color: #fff;
+  margin: 0 0 4px; transform: skewX(-6deg); }
+.fgSub { font-size: 12px; color: #8fa8e8; margin: 0 0 14px; }
+/* lights out */
+#loPods { display: flex; gap: 12px; justify-content: center; margin: 22px 0; }
+#loPods i { width: 46px; height: 46px; border-radius: 50%; background: #1a2340; border: 2px solid #2a3a68; }
+#loPods i.on { background: #ff2218; box-shadow: 0 0 22px #ff2218; border-color: #ff6a5e; }
+#loPods i.jump { background: #ff8c1a; box-shadow: 0 0 18px #ff8c1a; }
+#loMsg { min-height: 34px; font-size: 13px; color: #cdd9f6; }
+#loTimes b { display: inline-block; margin: 0 6px; font-family: 'Archivo Black', sans-serif; font-size: 17px;
+  color: #cdd9f6; transform: skewX(-8deg); }
+#loTimes b.hot { color: #ff8c1a; }
+/* the call */
+.clQ { font-size: 15px; color: #fff; line-height: 1.5; min-height: 48px; }
+.clBar { height: 7px; background: rgba(46,107,255,.15); margin: 10px auto 14px; max-width: 420px; }
+.clBar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #2e6bff, #ff8c1a); }
+.clOpts { display: flex; flex-direction: column; gap: 8px; max-width: 420px; margin: 0 auto; }
+.clOpts button { width: 100%; padding: 12px; font-weight: 800; }
+.clOpts button.right { background: rgba(46,157,99,.3) !important; border-color: #2e9d63 !important; }
+.clOpts button.wrong { background: rgba(199,58,44,.3) !important; border-color: #c73a2c !important; }
+.clWhy { font-size: 12px; color: #8fa8e8; min-height: 30px; margin-top: 10px; }
+.clDone { font-size: 16px; color: #fff; }
+/* torque */
+#tqGauge { position: relative; height: 42px; background: #131c38; border: 1.5px solid #2a3a68;
+  max-width: 460px; margin: 18px auto 10px; overflow: hidden; }
+#tqGreen { position: absolute; top: 0; bottom: 0; background: rgba(46,157,99,.55); border-left: 1px solid #2e9d63; border-right: 1px solid #2e9d63; }
+#tqNeedle { position: absolute; top: -3px; bottom: -3px; width: 4px; background: #ff8c1a; box-shadow: 0 0 10px #ff8c1a; }
+#tqMsg { min-height: 30px; font-size: 13px; color: #cdd9f6; }
+#tqBolts { display: flex; gap: 8px; justify-content: center; margin: 10px 0; }
+#tqBolts i { width: 22px; height: 22px; background: #1a2340; border: 1.5px solid #2a3a68; transform: rotate(45deg); }
+#tqBolts i.done { background: #2e9d63; border-color: #3fae76; }
+#tqBolts i.strip { background: #c73a2c; border-color: #ff6a5e; }
+/* manager */
+#mgBreath { width: 90px; height: 90px; border-radius: 50%; margin: 20px auto; border: 2px solid #2e6bff;
+  box-shadow: 0 0 24px rgba(46,107,255,.35); transition: transform 4s ease-in-out; }
+#mgBreath.breathing { animation: mgB 8s ease-in-out infinite; }
+@keyframes mgB { 0%, 100% { transform: scale(.7); } 50% { transform: scale(1.25); } }
+#mgMsg { font-size: 13px; color: #cdd9f6; line-height: 1.6; min-height: 46px; }
+#fgStage > button, #fgStage .clOpts + button { margin-top: 10px; }
