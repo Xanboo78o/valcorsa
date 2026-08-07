@@ -61,7 +61,9 @@
     if (state !== 'race' || !v) return;
     const d = D(car);
     if (d.cd > 0 || d.shattered) return;
-    const dash = v * DASH;                       // impact speed as the driver reads it
+    // chassis TOUGH softens (or sharpens) the hit — tough 9 truck shrugs off what folds a bike
+    const tough = (car.isPlayer && window.ECON && ECON.mods) ? (ECON.mods().tough ?? 5) : 5;
+    const dash = v * DASH * (1 - (tough - 5) * 0.04);   // impact speed as the driver reads it
     if (dash < 25) return;                       // a bump: knockback and you're chillin
     d.cd = 0.5;
     if (dash > 195) return shatter(car);         // full-send head-on: carisvaporizeditis

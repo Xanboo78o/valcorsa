@@ -104,7 +104,6 @@ window.ECON = (() => {
     const list = PARTS.filter(p => !p.legacy &&
       (q ? (p.name + p.brand + p.fam).toLowerCase().includes(q) : p.fam === curFam));
     $$('storeGrid').innerHTML = list.slice(0, 80).map(p => {
-      const stats = Object.entries(p.stats).map(([k, v2]) => `${k} ${v2}`).join(' · ');
       const owned = my[p.id] || 0;
       const cardN = cd[p.id] || 0;
       const locked = p.fam === 'Chassis' && cardN < CARDS_NEEDED;
@@ -115,7 +114,8 @@ window.ECON = (() => {
         <div class="prodImg">${window.PART_ICON ? PART_ICON(p) : ''}${owned ? `<i class="prodOwned">×${owned}</i>` : ''}</div>
         <b class="prodName">${p.name}</b>
         <small class="prodBrand">${p.brand}</small>
-        <small class="prodNote">${stats || p.note || '&nbsp;'}</small>
+        <small class="prodNote">${p.note || '&nbsp;'}</small>
+        <div class="prodStats">${sheetHTML(p.stats, p.fam)}</div>
         ${p.atom ? '<small class="prodNote" style="color:#ff8c1a;font-weight:700">🔧 WORKBENCH PART — assemble in the Engineer Garage</small>' : ''}
         <div class="prodBuy"><span class="prodPrice">${p.price ? '₡' + p.price : 'FREE'}</span>${buy}</div>
       </div>`;
@@ -228,7 +228,7 @@ window.ECON = (() => {
     const b = ENGINEMATH.builds().find(x => 'build:' + x.id === id);
     return b ? { power: 40 + b.vp / 6, weight: b.mass } : null;   // M1 basic build ≈ stock 55
   }
-  function computeMods(parts) {
+  function computeMods(parts, chassisId) {
     const cl = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
     const st = fam => {
       const id = parts && parts[fam];
@@ -238,14 +238,17 @@ window.ECON = (() => {
     };
     const e = st('Engine'), t = st('Tires');
     const b = STOCK_STATS.Brakes, a = STOCK_STATS.Aero;   // Engineer Garage territory — always stock here
+    // the chassis spec sheet is REAL (carfactory CHASSIS_STATS): aero cuts drag,
+    // weight taxes accel, agility adds a whisker of grip, tough softens crashes
+    const ch = (window.CHASSIS_STATS && CHASSIS_STATS[chassisId]) || { aero: 5, weight: 5, agility: 5, tough: 5 };
     // tire personality is REAL now: Wet Tread claws back most of the rain penalty
     // (and gives a little up in the dry); knobbies do the same for dirt. Physics reads
     // PM.grip per frame, so a getter makes tires weather/surface-aware with zero main.js edits.
     const tp = (() => { const id = parts && parts.Tires; const p = id && PARTS.find(x => x.id === id); return p ? p.name : ''; })();
     const isWet = /wet/i.test(tp), isKnob = /knobby|gravel/i.test(tp);
-    const dryGrip = cl(0.9 + (t.grip ?? 6) * 0.018 + (a.downforce ?? 0) * 0.004, 0.92, 1.12);
+    const dryGrip = cl(0.9 + (t.grip ?? 6) * 0.018 + (a.downforce ?? 0) * 0.004 + (ch.agility - 5) * 0.004, 0.92, 1.12);
     return {
-      accel: cl(0.82 + (e.power ?? 55) / 280, 0.9, 1.14),
+      accel: cl(0.82 + (e.power ?? 55) / 280 - (ch.weight - 5) * 0.006, 0.9, 1.14),
       get grip() {
         const gm = (typeof WEATHER !== 'undefined' && WEATHER.gripMul) || 1;
         if (isWet) {
@@ -255,15 +258,16 @@ window.ECON = (() => {
         return dryGrip;
       },
       brake: cl(0.9 + (b.stop ?? 6) * 0.02, 0.92, 1.1),
-      drag:  cl(1 + ((a.drag ?? 3) - 3) * 0.012, 0.95, 1.08),
+      drag:  cl((1 + ((a.drag ?? 3) - 3) * 0.012) * (1 - (ch.aero - 5) * 0.008), 0.94, 1.1),
       tireWear: t.wear ?? 6,                              // damage.js: tougher tires shrug off drift wear
       dirtTire: isKnob,
+      tough: ch.tough ?? 5,                               // damage.js: crash damage scales off this
     };
   }
   function mods() {   // physics reads THIS: the active livery kart's build
     if (modsCache) return modsCache;
     const act = livery().find(k => k.id === activeId());
-    const m = computeMods(act ? act.parts : null);
+    const m = computeMods(act ? act.parts : null, (act && act.kit && act.kit.chassis) || (typeof KIT !== 'undefined' && KIT.chassis));
     // drift assist is a physical bay unit (garage3d): pulled out = way less self-straightening
     m.stab = act && act.assistOut ? 0.25 : 1;
     return modsCache = m;
@@ -291,6 +295,58 @@ window.ECON = (() => {
       bar('Power', e.power ?? 55, 20, 115) +
       bar('Grip', t.grip ?? 6, 1, 10) +
       bar('Weight', (e.weight ?? 50) + (t.weight ?? 7) * 4, 55, 165);
+  }
+
+  // ---- SPEC SHEETS: every thing shows its real numbers (max 5 per sheet).
+  // Orange 'bad' bars = stats where a big bar hurts (heat, fade, drag).
+  const STAT_META = {
+    aero: ['AERO', 10], agility: ['AGILITY', 10], tough: ['TOUGH', 10], trunk: ['TRUNK', 10],
+    power: ['POWER', 115], heat: ['HEAT', 10, 1], reliability: ['RELIABLE', 10], loudness: ['LOUD', 11],
+    grip: ['GRIP', 10], wear: ['LIFE', 10, 0, x => 11 - x], wet: ['WET', 10], dirt: ['DIRT', 10],
+    stop: ['STOP', 10], bite: ['BITE', 10], fade: ['FADE', 10, 1], shift: ['SHIFT', 10],
+    downforce: ['DOWNFRC', 10], drag: ['DRAG', 10, 1], balance: ['BALANCE', 10], style: ['STYLE', 10],
+    weight: ['WEIGHT', 10], draw: ['DRAW', 6], size: ['SIZE', 10],
+  };
+  const W_MAX = { Engine: 110, Tires: 12, Gearbox: 14, Brakes: 12, Aero: 8 };   // weight scales per family
+  function sheetHTML(stats, fam) {
+    if (!stats) return '';
+    return Object.entries(stats).filter(([k]) => STAT_META[k]).slice(0, 5).map(([k, raw]) => {
+      const [label, max, bad, conv] = STAT_META[k];
+      const val = conv ? conv(raw) : raw;
+      const mx = k === 'weight' ? (W_MAX[fam] || 10) : max;
+      const w = Math.max(4, Math.min(100, Math.round(val / mx * 100)));
+      return `<div class="loBar sBar${bad ? ' bad' : ''}"><span>${label}</span><div><i style="width:${w}%"></i></div><em>${val}</em></div>`;
+    }).join('');
+  }
+  function renderItemSheet() {
+    let el = $$('itemStats');
+    if (!el) {
+      const lb = $$('loadoutBars');
+      if (!lb) return;
+      el = document.createElement('div');
+      el.id = 'itemStats';
+      lb.parentNode.insertBefore(el, lb);
+    }
+    const cat = CATS[catI], cur = cat.cur();
+    let stats = null, ttl = '';
+    if (cat.key === 'Chassis') {
+      stats = window.CHASSIS_STATS && CHASSIS_STATS[cur];
+      ttl = (typeof CHASSIS_LABELS !== 'undefined' && CHASSIS_LABELS[cur]) || '';
+    } else if (cat.key === 'Tires' || cat.key === 'Engine') {
+      if (!cur) { stats = STOCK_STATS[cat.key]; ttl = 'Standard issue'; }
+      else if (String(cur).startsWith('build:') && window.ENGINEMATH) {
+        const b = ENGINEMATH.builds().find(x => 'build:' + x.id === cur);
+        if (b) {
+          stats = { power: Math.round(40 + b.vp / 6), weight: Math.round(b.mass ?? 40),
+                    heat: Math.round(b.heat ?? 5), reliability: Math.round(b.rel ?? 7) };
+          ttl = b.name;
+        }
+      } else {
+        const p = PARTS.find(x => x.id === cur);
+        if (p) { stats = p.stats; ttl = p.name; }
+      }
+    }
+    el.innerHTML = stats ? `<p class="sHead">${ttl} · SPEC SHEET</p>` + sheetHTML(stats, cat.key) : '';
   }
   const CH_MAP = { 'Enginos GT': 'gt', 'Houndsborough Iron': 'muscle', 'Heiligen Strada': 'rally',
                    'Enginos Volante F': 'formula', 'Norte Titan': 'truck',
@@ -362,6 +418,7 @@ window.ECON = (() => {
     markCenter(curIdx);
     w.querySelectorAll('.wCard').forEach(c => c.onclick = () =>
       w.scrollTo({ top: (+c.dataset.i) * CARD_H, behavior: 'smooth' }));
+    renderItemSheet();
   }
   function markCenter(idx) {
     $$('snapWheel').querySelectorAll('.wCard').forEach((c, i) => c.classList.toggle('centered', i === idx));
@@ -380,6 +437,7 @@ window.ECON = (() => {
         renderBars(draftParts);
         if (navigator.vibrate) navigator.vibrate(8);
       }
+      renderItemSheet();
     }, 110);
   }
   function stepCat(d) {

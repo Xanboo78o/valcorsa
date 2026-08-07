@@ -11,6 +11,24 @@ const CHASSIS = ['gt', 'muscle', 'rally', 'formula', 'truck', 'kart', 'bike',
 // Valcorsan showroom — every chassis is a factory car from an in-world marque.
 const CHASSIS_LABELS = { gt: 'Enginos GT', muscle: 'Houndsborough Iron', rally: 'Heiligen Strada', formula: 'Enginos Volante F', truck: 'Norte Titan', kart: 'Granada Sprint Kart', bike: 'Perro Moto',
                          monoposto: 'F1 Monoposto', endurance: 'Heiligen Endurance', barrel: 'Barrel Kart', longframe: 'Twin-Engine Longframe', sofa: 'The Sofa' };
+// The chassis spec sheets (1-10, hand-authored — these are REAL: aero feeds drag,
+// weight feeds accel, agility feeds grip, tough feeds crash damage; trunk is the
+// physical spares space the coming parts-logistics uses. Honesty law: no fake bars.)
+const CHASSIS_STATS = {
+  gt:        { aero: 7,  weight: 5,  agility: 6,  tough: 5, trunk: 4 },
+  muscle:    { aero: 4,  weight: 7,  agility: 4,  tough: 7, trunk: 6 },
+  rally:     { aero: 5,  weight: 5,  agility: 7,  tough: 6, trunk: 5 },
+  formula:   { aero: 8,  weight: 2,  agility: 8,  tough: 2, trunk: 0 },
+  truck:     { aero: 2,  weight: 10, agility: 2,  tough: 9, trunk: 8 },
+  kart:      { aero: 3,  weight: 1,  agility: 9,  tough: 3, trunk: 1 },
+  bike:      { aero: 6,  weight: 1,  agility: 10, tough: 1, trunk: 0 },
+  monoposto: { aero: 10, weight: 2,  agility: 9,  tough: 2, trunk: 0 },
+  endurance: { aero: 9,  weight: 4,  agility: 6,  tough: 7, trunk: 3 },
+  barrel:    { aero: 1,  weight: 4,  agility: 5,  tough: 6, trunk: 10 },  // it IS a trunk
+  longframe: { aero: 5,  weight: 8,  agility: 1,  tough: 4, trunk: 2 },
+  sofa:      { aero: 1,  weight: 6,  agility: 3,  tough: 5, trunk: 9 },   // under the cushions
+};
+window.CHASSIS_STATS = CHASSIS_STATS;
 const WHEEL_STYLES = ['sport', 'classic', 'deep', 'offroad', 'neon'];
 const WHEEL_LABELS = { sport: 'Sport 5-spoke', classic: 'Classic steel', deep: 'Gold deep-dish', offroad: 'Off-road knobby', neon: 'Neon glow' };
 const DECALS = ['none', 'stripes', 'number', 'flames', 'checker'];

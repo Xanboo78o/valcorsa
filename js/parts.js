@@ -44,23 +44,25 @@ window.PARTS = (() => {
   // THE ONE EXCEPTION: a sealed post-standard factory unit, VCRA type-approved
   // under protest. No serviceable parts inside. Do not open. (It is a voice.)
   add('Engine', 'Xanboo78MotorCorps', 'The Vocalmotor', 'legendary', 260,
-      { power: 96, weight: 44, heat: 5, reliability: 8 }, 'sealed at the factory. inside: a voice.');
+      { power: 96, weight: 44, heat: 5, reliability: 8, loudness: 11 }, 'sealed at the factory. inside: a voice.');
 
   // ---- TIRES ----
   const TB = ['Valgrip', 'Södergummi', 'El Pulpo'];
+  // wet/dirt columns mirror the REAL weather physics (only /wet/ names claw back
+  // rain, only /knobby|gravel/ names claw back dirt — the sheet never lies)
   const TS = [
-    ['Racing Soft',   'solid',   9, 3, 'grip now, regret later'],
-    ['Racing Medium', 'common',  7, 5, 'the sensible shoe'],
-    ['Racing Hard',   'common',  5, 9, 'outlives empires'],
-    ['Rally Knobby',  'solid',   6, 7, 'eats gravel for breakfast'],
-    ['Wet Tread',     'solid',   6, 6, 'southern weather insurance'],
-    ['Gravel Slinger','common',  5, 6, 'leaves a mess'],
-    ['Drift Special', 'rare',    8, 2, 'sideways is a lifestyle'],
-    ['Wooden Wagon',  'common',  1, 10, 'technically a tire'],
-    ['Beach Ball',    'rare',    2, 1, 'VCRA reviewing legality'],
+    ['Racing Soft',   'solid',   9, 3, 2, 2, 'grip now, regret later'],
+    ['Racing Medium', 'common',  7, 5, 3, 2, 'the sensible shoe'],
+    ['Racing Hard',   'common',  5, 9, 3, 2, 'outlives empires'],
+    ['Rally Knobby',  'solid',   6, 7, 3, 8, 'eats gravel for breakfast'],
+    ['Wet Tread',     'solid',   6, 6, 9, 2, 'southern weather insurance'],
+    ['Gravel Slinger','common',  5, 6, 2, 8, 'leaves a mess'],
+    ['Drift Special', 'rare',    8, 2, 2, 3, 'sideways is a lifestyle'],
+    ['Wooden Wagon',  'common',  1, 10, 1, 3, 'technically a tire'],
+    ['Beach Ball',    'rare',    2, 1, 1, 1, 'VCRA reviewing legality'],
   ];
-  for (const b of TB) for (const [name, rar, grip, wear, note] of TS)
-    add('Tires', b, name, rar, 25, { grip, wear, weight: Math.round(v(b + name, 4, 11)) }, note);
+  for (const b of TB) for (const [name, rar, grip, wear, wet, dirt, note] of TS)
+    add('Tires', b, name, rar, 25, { grip, wear, wet, dirt, weight: Math.round(v(b + name, 4, 11)) }, note);
 
   // ---- GEARBOXES ----
   const GB = ['ChanesDrive', 'Basil Werk', 'XB78 Corps'];
@@ -84,7 +86,7 @@ window.PARTS = (() => {
       ['Ceramic Race Discs', 'rare', 'they work angrily'],
       ['The Anchor', 'rare', 'a literal anchor'],
     ])
-      add('Brakes', b, name, rar, 22, { stop: Math.round(v(b + name, 3, 10)), weight: Math.round(v(name, 3, 12)) }, note);
+      add('Brakes', b, name, rar, 22, { stop: Math.round(v(b + name, 3, 10)), bite: Math.round(v(name + b + 'bi', 2, 10)), fade: Math.round(v(b + name + 'fa', 2, 9)), weight: Math.round(v(name, 3, 12)), reliability: Math.round(v(name + 'rel', 4, 10)) }, note);
 
   // ---- AERO ----
   for (const b of ['Enginos Aero', 'XB78 Corps', 'Papel S.A.'])
@@ -95,7 +97,7 @@ window.PARTS = (() => {
       ['Drag Parachute', 'rare', 'stops you. once.'],
       ['Umbrella Mount', 'common', 'aero AND dry'],
     ])
-      add('Aero', b, name, rar, 20, { downforce: Math.round(v(b + name, 1, 9)), drag: Math.round(v(name + b, 1, 8)) }, note);
+      add('Aero', b, name, rar, 20, { downforce: Math.round(v(b + name, 1, 9)), drag: Math.round(v(name + b, 1, 8)), weight: Math.round(v(b + name + 'w', 1, 8)), balance: Math.round(v(name + b + 'ba', 3, 9)), style: Math.round(v(b + name + 'st', 1, 10)) }, note);
 
   // ---- ELECTRICAL ----
   for (const [name, rar, note] of [
@@ -121,17 +123,20 @@ window.PARTS = (() => {
   ]) add('Fluid', 'Fluidos GC', name, rar, 14, { size: Math.round(v(name, 1, 9)) }, note);
 
   // ---- CHASSIS (bought via ChanesChassis cards) ----
-  for (const [name, rar, note] of [
-    ['Enginos GT', 'solid', 'the marque'], ['Houndsborough Iron', 'solid', 'northern steel'],
-    ['Heiligen Strada', 'solid', 'coast-road bones'], ['Enginos Volante F', 'rare', 'the flyer'],
-    ['Norte Titan', 'solid', 'heavy is a feature'], ['Granada Sprint Kart', 'common', 'the starter dream'],
-    ['Perro Moto', 'common', 'barks at corners'],
-    ['F1 Monoposto', 'legendary', 'the pinnacle'],
-    ['Heiligen Endurance Frame', 'legendary', 'built for October'],
-    ['Barrel Kart', 'rare', 'it’s a barrel'],
-    ['Twin-Engine Longframe', 'legendary', 'why'],
-    ['The Sofa', 'rare', 'comfort-first engineering'],
-  ]) add('Chassis', 'ChanesChassis', name, rar, 90, { weight: Math.round(v(name, 40, 120)) }, note);
+  // stats come from the real spec sheets in carfactory.js (CHASSIS_STATS) — the
+  // store card shows exactly what the physics reads
+  for (const [name, rar, note, chId] of [
+    ['Enginos GT', 'solid', 'the marque', 'gt'], ['Houndsborough Iron', 'solid', 'northern steel', 'muscle'],
+    ['Heiligen Strada', 'solid', 'coast-road bones', 'rally'], ['Enginos Volante F', 'rare', 'the flyer', 'formula'],
+    ['Norte Titan', 'solid', 'heavy is a feature', 'truck'], ['Granada Sprint Kart', 'common', 'the starter dream', 'kart'],
+    ['Perro Moto', 'common', 'barks at corners', 'bike'],
+    ['F1 Monoposto', 'legendary', 'the pinnacle', 'monoposto'],
+    ['Heiligen Endurance Frame', 'legendary', 'built for October', 'endurance'],
+    ['Barrel Kart', 'rare', 'it’s a barrel', 'barrel'],
+    ['Twin-Engine Longframe', 'legendary', 'why', 'longframe'],
+    ['The Sofa', 'rare', 'comfort-first engineering', 'sofa'],
+  ]) add('Chassis', 'ChanesChassis', name, rar, 90,
+         (window.CHASSIS_STATS && CHASSIS_STATS[chId]) ? { ...CHASSIS_STATS[chId] } : { weight: Math.round(v(name, 40, 120)) }, note);
 
   // ---- CONSUMABLES (the floor of the whole economy) ----
   for (const [name, note] of [
