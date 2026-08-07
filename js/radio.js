@@ -153,7 +153,7 @@
     localStorage.setItem('vc_radio_last', DAY());
     const dot = document.getElementById('radioDot'); if (dot) dot.style.display = 'none';
     const btn = document.getElementById('radioPlayBtn'); if (btn) btn.textContent = '⏹ Stop';
-    try { R.bed = new Audio('music/take-you-higher.mp3'); R.bed.loop = true; R.bed.volume = 0.07; R.bed.play().catch(() => {}); } catch (e) {}
+    try { R.bed = new Audio('music/home-of-racing.mp3'); R.bed.loop = true; R.bed.volume = 0.07; R.bed.play().catch(() => {}); } catch (e) {}
     jingle();
     setTimeout(speakLine, 700);
   };

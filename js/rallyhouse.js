@@ -1,19 +1,18 @@
-// VALCORSA — rally house soundtrack.
-// All tracks: 1000 Handz — "CC-BY Free To Use Dance/House Instrumentals"
-// (freemusicarchive.org, 1000handz.com). License: CC BY. Attribution shown
-// in Settings and via the now-playing toast.
+// VALCORSA — Home of Racing: the ORIGINAL SOUNDTRACK.
+// Rally house composed in-house for the game (synthesized album, 2026-08-07):
+// classic-house DNA (m9 stabs, offbeat hats, sidechain pump, swing) at racing
+// tempo. Each track scores a corner of the country.
 // main.js delegates startMusic/stopMusic/setMusicFinalLap here.
 (function () {
   const RACE = [
-    { f: 'music/faxing-berlin.mp3',    t: 'Faxing Berlin' },
-    { f: 'music/basement-jaxx.mp3',    t: 'Basement Jaxx' },
-    { f: 'music/big-cat.mp3',          t: 'Big Cat' },
-    { f: 'music/fashion-week.mp3',     t: 'Fashion Week' },
-    { f: 'music/resistance.mp3',       t: 'Resistance' },
-    { f: 'music/digital-love.mp3',     t: 'Digital Love' },
-    { f: 'music/sonic-electronic.mp3', t: 'Sonic Electronic' },
+    { f: 'music/houndsborough-gp.mp3',   t: 'Houndsborough GP' },
+    { f: 'music/perro-saltarin.mp3',     t: 'Perro Saltarín' },
+    { f: 'music/san-volante-nights.mp3', t: 'San Volante Nights' },
+    { f: 'music/heiligen-coast.mp3',     t: 'Heiligen Coast' },
+    { f: 'music/granada-sprint.mp3',     t: 'Granada Sprint' },
+    { f: 'music/bahia-lluvia.mp3',       t: 'Bahía Lluvia' },
   ];
-  const MENU = { f: 'music/take-you-higher.mp3', t: 'Take You Higher' };
+  const MENU = { f: 'music/home-of-racing.mp3', t: 'Home of Racing' };
 
   const el = new Audio();
   el.preload = 'auto';
@@ -50,9 +49,9 @@
     el.playbackRate = 1;
     const p = el.play();
     if (p) p.then(() => {
-      if (window.toast && mode === 'race') toast('♪ ' + track.t + ' — 1000 Handz');
+      if (window.toast && mode === 'race') toast('♪ ' + track.t + ' — Valcorsa OST');
       const np = document.getElementById('npTrack');
-      if (np) np.textContent = track.t + ' — 1000 Handz';
+      if (np) np.textContent = track.t + ' — Valcorsa OST';
     }).catch(() => { pending = { track, vol, loop }; }); // autoplay-blocked: retry on gesture
   }
 
