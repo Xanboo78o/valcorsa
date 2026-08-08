@@ -10,67 +10,100 @@
 (function () {
   const MU = window.FX.BufferGeometryUtils;
 
-  // ---- the vocabulary ----
-  let _cube = null, _wedge = null, _curve = null, _arch = null;
-  function cubeGeo() { return _cube || (_cube = new THREE.BoxGeometry(1, 1, 1)); }
-  function wedgeGeo() {                       // prism: full height at -Z, zero at +Z (scale sy/sz = any slope)
-    if (_wedge) return _wedge;
-    const p = [], n = [], idx = [];
-    const v = [
-      [-0.5, -0.5, 0.5], [0.5, -0.5, 0.5],
-      [-0.5, -0.5, -0.5], [0.5, -0.5, -0.5],
-      [-0.5, 0.5, -0.5], [0.5, 0.5, -0.5],
-    ];
-    function face(list, nx, ny, nz, flip) {
-      const s = p.length / 3;
-      for (const i of list) { p.push(...v[i]); n.push(nx, ny, nz); }
-      if (list.length === 4) idx.push(s, s + (flip ? 2 : 1), s + (flip ? 1 : 2), s, s + (flip ? 3 : 2), s + (flip ? 2 : 3));
-      else idx.push(s, s + (flip ? 2 : 1), s + (flip ? 1 : 2));
+  /* ---- the vocabulary, v3: SCULPTED, not stacked ----
+     Every primitive is now generated at its FINAL WORLD SIZE with a fillet measured in
+     real units, instead of a unit cube stretched by a matrix. That matters: a stretched
+     unit fillet turns into a smeared ellipse on a long panel, and that smear is exactly
+     what reads as "blocky". True-size generation means a door edge and a roof edge have
+     the same radius, which is what a real pressed panel looks like.
+     The block list API is unchanged — all 30-odd bodies get molded for free. */
+  const RBox = window.FX.RoundedBoxGeometry;
+  const _cache = new Map();                    // repeated blocks (4 identical arches) build once
+
+  // fillet: a fat panel gets a generous radius, a blade gets a hairline. Never more than
+  // a third of the thinnest dimension or the shape eats itself.
+  // Tuned by eye: 0.3 of the thin dimension turns a rocker panel into a pool noodle.
+  // A fifth, capped low, kills the Lego edge without inflating anything.
+  const fil = (a, b, c) => Math.min(0.045, Math.max(0.008, Math.min(a, b, c) * 0.2));
+
+  // rounded 2D path: corners cut back by r and rounded through. Feeds the extrusions.
+  function roundPath(pts, r) {
+    const s = new THREE.Shape();
+    const n = pts.length;
+    const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    for (let i = 0; i < n; i++) {
+      const prev = pts[(i - 1 + n) % n], cur = pts[i], nxt = pts[(i + 1) % n];
+      const dP = Math.hypot(cur[0] - prev[0], cur[1] - prev[1]) || 1;
+      const dN = Math.hypot(nxt[0] - cur[0], nxt[1] - cur[1]) || 1;
+      const rp = Math.min(r, dP * 0.45), rn = Math.min(r, dN * 0.45);
+      const a = lerp(cur, prev, rp / dP), b = lerp(cur, nxt, rn / dN);
+      if (i === 0) s.moveTo(a[0], a[1]); else s.lineTo(a[0], a[1]);
+      s.quadraticCurveTo(cur[0], cur[1], b[0], b[1]);
     }
-    const sl = Math.SQRT1_2;
-    face([0, 2, 3, 1], 0, -1, 0, false);       // bottom
-    face([4, 5, 3, 2], 0, 0, -1, false);       // tail (vertical)
-    face([0, 1, 5, 4], 0, sl, sl, false);      // the slope
-    face([0, 4, 2], -1, 0, 0, false);          // caps
-    face([1, 3, 5], 1, 0, 0, false);
-    _wedge = new THREE.BufferGeometry();
-    _wedge.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
-    _wedge.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3));
-    _wedge.setIndex(idx);
-    return _wedge;
-  }
-  function curveGeo() {                       // quarter-round: crisp everywhere, curved on one shoulder
-    if (_curve) return _curve;
-    const s = new THREE.Shape();
-    s.moveTo(-0.5, -0.5);
-    s.lineTo(0.5, -0.5);
-    s.absarc(-0.5, -0.5, 1, 0, Math.PI / 2, false);
     s.closePath();
-    const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false, curveSegments: 6 });
-    g.translate(0, 0, -0.5);
-    g.rotateY(Math.PI / 2);
-    _curve = g;
-    return _curve;
+    return s;
   }
-  function archGeo() {                        // fender: slab with the wheel well. ORIGIN AT THE AXLE.
-    if (_arch) return _arch;
+
+  // extrude a profile that lives in the (z, y) plane and runs across the car in x —
+  // the orientation every profile primitive here uses.
+  function crossExtrude(shape, sx, bevel) {
+    const g = new THREE.ExtrudeGeometry(shape, {
+      depth: Math.max(0.001, sx - bevel * 2), bevelEnabled: bevel > 0.0005,
+      bevelThickness: bevel, bevelSize: bevel, bevelSegments: 1, curveSegments: 4,
+    });
+    g.translate(0, 0, -(sx - bevel * 2) / 2);
+    g.rotateY(Math.PI / 2);
+    return g;
+  }
+
+  function makeGeo(t, sx, sy, sz) {
+    const r = fil(sx, sy, sz);
+    // ONE bevel segment, not two. A single chamfer plus the creased-normal pass below
+    // reads as a rounded edge from any distance a player will ever see it from, and costs
+    // about a tenth of the triangles a real fillet does. This is the whole budget.
+    if (t === 'c') return new RBox(sx, sy, sz, 1, r);
+    if (t === 'w') {                           // wedge: full height at -Z, zero at +Z
+      const hz = sz / 2, hy = sy / 2;
+      return crossExtrude(roundPath([[hz, -hy], [-hz, -hy], [-hz, hy]], Math.min(r * 1.6, sy * 0.3, sz * 0.3)), sx, r * 0.7);
+    }
+    if (t === 'q') {                           // quarter-round: one shoulder rolls over
+      const s = new THREE.Shape();
+      const hz = sz / 2, hy = sy / 2;
+      s.moveTo(-hz, -hy);
+      s.lineTo(hz, -hy);
+      s.absellipse(-hz, -hy, sz, sy, 0, Math.PI / 2, false);
+      s.closePath();
+      return crossExtrude(s, sx, r * 0.7);
+    }
+    // 'a' — fender arch. ORIGIN AT THE AXLE. Now with a rolled outer lip.
+    // the arch profile is NOT unit-sized (it spans 1.24 x 0.7), so sy/sz have always been
+    // scale factors here, not dimensions. Treating them as sizes shrinks the wheel well and
+    // the fender saws into the tyre.
+    const w = sz, h = sy;
     const s = new THREE.Shape();
-    s.moveTo(-0.62, -0.1);
-    s.lineTo(-0.44, -0.1);
-    s.lineTo(-0.44, 0);
-    s.absarc(0, 0, 0.44, Math.PI, 0, true);
-    s.lineTo(0.44, -0.1);
-    s.lineTo(0.62, -0.1);
-    s.lineTo(0.62, 0.6);
-    s.lineTo(-0.62, 0.6);
+    s.moveTo(-0.62 * w, -0.1 * h);
+    s.lineTo(-0.44 * w, -0.1 * h);
+    s.lineTo(-0.44 * w, 0);
+    s.absellipse(0, 0, 0.44 * w, 0.44 * h, Math.PI, 0, true);
+    s.lineTo(0.44 * w, -0.1 * h);
+    s.lineTo(0.62 * w, -0.1 * h);
+    s.lineTo(0.62 * w, 0.6 * h);
+    s.lineTo(-0.62 * w, 0.6 * h);
     s.closePath();
-    const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false, curveSegments: 8 });
-    g.translate(0, 0, -0.5);
-    g.rotateY(Math.PI / 2);
-    _arch = g;
-    return _arch;
+    return crossExtrude(s, sx, Math.min(0.035, sx * 0.25));
   }
-  const GEO = { c: cubeGeo, w: wedgeGeo, q: curveGeo, a: archGeo };
+
+  function geoFor(t, sx, sy, sz) {
+    const k = t + '|' + sx.toFixed(3) + '|' + sy.toFixed(3) + '|' + sz.toFixed(3);
+    let g = _cache.get(k);
+    if (!g) {
+      g = makeGeo(t, Math.abs(sx) || 0.01, Math.abs(sy) || 0.01, Math.abs(sz) || 0.01);
+      g = g.index ? g.toNonIndexed() : g;
+      for (const key of Object.keys(g.attributes)) if (key !== 'position' && key !== 'normal') g.deleteAttribute(key);
+      _cache.set(k, g);
+    }
+    return g;
+  }
 
   /* weld: blocks -> ONE mesh per material. Geometries are normalized to
      non-indexed position+normal so boxes and extrusions merge cleanly.
@@ -80,23 +113,94 @@
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
     for (const b of blocks) {
       const [t, mat, x, y, z, sx, sy, sz, ry] = b;
-      let geo = GEO[t]();
-      geo = geo.index ? geo.toNonIndexed() : geo.clone();
-      for (const key of Object.keys(geo.attributes)) if (key !== 'position' && key !== 'normal') geo.deleteAttribute(key);
+      const geo = geoFor(t, sx, sy, sz).clone();     // already at true size — place only
       e.set(0, (ry || 0) * Math.PI / 2, 0);
       q.setFromEuler(e);
-      m4.compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(sx, sy, sz));
+      m4.compose(new THREE.Vector3(x, y, z), q, new THREE.Vector3(1, 1, 1));
       geo.applyMatrix4(m4);
       (buckets[mat] = buckets[mat] || []).push(geo);
     }
     for (const key of Object.keys(buckets)) {
-      const merged = MU.mergeGeometries(buckets[key], false);
+      let merged = MU.mergeGeometries(buckets[key], false);
       if (!merged) continue;
+      // smooth across the fillets, stay crisp across panel edges — the difference between
+      // "moulded bodywork" and "a pile of bricks" is entirely in this one threshold
+      if (MU.toCreasedNormals) { try { merged = MU.toCreasedNormals(merged, 0.62); } catch (e) {} }
       const mesh = new THREE.Mesh(merged, matMap[key]);
       mesh.castShadow = true;
       g.add(mesh);
     }
   }
+
+  /* ---- WHEELS v2: a real tyre with rolled shoulders, and a rim with spokes in it.
+     Still exactly two meshes per corner (tyre + rim) because everything merges, so the
+     draw-call budget is unchanged. Geometry is cached by (radius, width, style): a full
+     12-car grid is really only three or four distinct wheels, and building 48 of them
+     from scratch was most of the cost of building the grid. */
+  const WHEEL = (() => {
+    const SEG = 16, tyres = new Map(), rims = new Map(), dishes = new Map();
+    const HUBR = [0.55, 0.66, 0.5, 0.4, 0.6];
+    function merge(list) {                      // [geo, x, y, z, rx, ry, rz]
+      const out = [], m4 = new THREE.Matrix4(), qq = new THREE.Quaternion(), ee = new THREE.Euler();
+      for (const [geo, px, py, pz, rx, ry, rz] of list) {
+        let gg = geo.index ? geo.toNonIndexed() : geo.clone();
+        for (const k of Object.keys(gg.attributes)) if (k !== 'position' && k !== 'normal') gg.deleteAttribute(k);
+        ee.set(rx || 0, ry || 0, rz || 0); qq.setFromEuler(ee);
+        m4.compose(new THREE.Vector3(px || 0, py || 0, pz || 0), qq, new THREE.Vector3(1, 1, 1));
+        gg.applyMatrix4(m4);
+        out.push(gg);
+      }
+      return MU.mergeGeometries(out, false);
+    }
+    function tyreGeo(r, width) {                // lathe: bead -> sidewall -> rolled shoulder -> tread
+      const k = r.toFixed(3) + '|' + width.toFixed(3);
+      let g = tyres.get(k);
+      if (g) return g;
+      const hw = width / 2, sh = Math.min(hw * 0.55, r * 0.2), inner = r * 0.3;
+      const pts = [new THREE.Vector2(inner, -hw), new THREE.Vector2(r * 0.9, -hw)];
+      for (let i = 1; i <= 3; i++) {            // rounded shoulder, near side
+        const a = (i / 4) * Math.PI / 2;
+        pts.push(new THREE.Vector2(r * 0.9 + r * 0.1 * Math.sin(a), -hw + sh * (1 - Math.cos(a))));
+      }
+      pts.push(new THREE.Vector2(r, -hw + sh), new THREE.Vector2(r, hw - sh));
+      for (let i = 3; i >= 1; i--) {            // and the far side
+        const a = (i / 4) * Math.PI / 2;
+        pts.push(new THREE.Vector2(r * 0.9 + r * 0.1 * Math.sin(a), hw - sh * (1 - Math.cos(a))));
+      }
+      pts.push(new THREE.Vector2(r * 0.9, hw), new THREE.Vector2(inner, hw));
+      g = new THREE.LatheGeometry(pts, SEG);
+      tyres.set(k, g);
+      return g;
+    }
+    function rimGeo(r, width, wIdx) {
+      const k = r.toFixed(3) + '|' + width.toFixed(3) + '|' + wIdx;
+      let g = rims.get(k);
+      if (g) return g;
+      const hr = HUBR[wIdx] ?? 0.55;
+      const spokes = wIdx === 3 ? 0 : wIdx === 1 ? 6 : wIdx === 2 ? 8 : 5;
+      const parts = [[new THREE.CylinderGeometry(r * hr * 0.3, r * hr * 0.3, width + 0.03, 14), 0, 0, 0]];
+      parts.push([new THREE.TorusGeometry(r * hr, r * 0.06, 5, SEG), 0, width / 2 - 0.03, 0, Math.PI / 2]);
+      parts.push([new THREE.TorusGeometry(r * hr, r * 0.06, 5, SEG), 0, -width / 2 + 0.03, 0, Math.PI / 2]);
+      for (let i = 0; i < spokes; i++) {
+        const a = (i / spokes) * Math.PI * 2;
+        const sp = new THREE.BoxGeometry(r * hr * 1.0, 0.045, r * 0.07);
+        sp.translate(r * hr * 0.52, 0, 0);
+        parts.push([sp, 0, width / 2 - 0.045, 0, 0, -a, 0]);
+        parts.push([sp.clone(), 0, -width / 2 + 0.045, 0, 0, -a, 0]);
+      }
+      if (wIdx === 3) parts.push([new THREE.CylinderGeometry(r * hr, r * hr, width * 0.6, 16), 0, 0, 0]);
+      g = merge(parts);
+      rims.set(k, g);
+      return g;
+    }
+    function dish(r) {
+      const k = r.toFixed(3);
+      let g = dishes.get(k);
+      if (!g) { g = new THREE.TorusGeometry(r * 0.78, 0.04, 5, SEG); dishes.set(k, g); }
+      return g;
+    }
+    return { HUBR, tyreGeo, rimGeo, dish };
+  })();
 
   // ---- the override: same contract as the original buildToyCar ----
   const HUBS = (typeof HUB_COLS !== 'undefined') ? HUB_COLS : [0xc8ccd4, 0xe8e2ce, 0xc9a13b, 0x3a3e46, 0x20f6e8];
@@ -128,7 +232,7 @@
         ? toonMat(0x2a2820, { emissive: 0xfff3d8, emissiveIntensity: 0 })
         : toonMat(0x33120f, { emissive: 0xff2218, emissiveIntensity: 0 });
       (kind === 'head' ? headMats : tailMats).push(mat);
-      add(new THREE.BoxGeometry(w, h, 0.06), mat, x, y, z);
+      add(new RBox(w, h, 0.07, 2, Math.min(0.028, h * 0.36, w * 0.36)), mat, x, y, z);
     };
     // ---- THE FACE — every marque gets eyes (always-on DRLs, unlit-bright day and night)
     // and a mouth. Eyes sit NEXT TO the night lamps, never over them (beams must stay visible).
@@ -138,28 +242,32 @@
     const eye = (x, y, z, r, c) => add(new THREE.CircleGeometry(r, 12), glowM(c || EYE), x, y, z);
     const pupil = (x, y, z, r) => add(new THREE.CircleGeometry(r, 10), glowM(PUPIL), x, y, z);
     const squint = (x, y, z, w, h, tilt) => add(new THREE.BoxGeometry(w, h, 0.03), glowM(EYE), x, y, z, 0, 0, tilt);
-    const tooth = (x, y, z, w, h) => add(new THREE.BoxGeometry(w, h, 0.05), chromeM, x, y, z);
+    const tooth = (x, y, z, w, h) => add(new RBox(w, h, 0.055, 2, Math.min(0.02, h * 0.35, w * 0.35)), chromeM, x, y, z);
     // wheel STYLES are visible now: hub size/color per style + deep-dish ring
     // 0 sport silver · 1 classic big cream · 2 gold deep-dish · 3 steelies · 4 neon
-    const HUBR = [0.55, 0.66, 0.5, 0.4, 0.6];
+    const HUBR = WHEEL.HUBR;
+    const { tyreGeo, rimGeo } = WHEEL;
+    // the lathe profile doubles back at the top bead, so that annulus winds inward and
+    // gets culled — you could see the fender through the wheel. One double-sided clone.
+    let _tyreMat = null;
+    const tyreMat = () => _tyreMat || (_tyreMat = Object.assign(dark.clone(), { side: THREE.DoubleSide }));
     const wheel = (x, z, front, r = 0.45, width = 0.44) => {
       const wg = new THREE.Group();
-      const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, width, 12), dark);
+      const w = new THREE.Mesh(tyreGeo(r, width), tyreMat());
       w.rotation.z = Math.PI / 2; w.castShadow = true;
       wg.add(w);
-      const hr = HUBR[wIdx] ?? 0.55;
-      const hb = new THREE.Mesh(new THREE.CylinderGeometry(r * hr, r * hr, width + 0.02, wIdx === 3 ? 8 : 10), hub);
+      // NOTE: the rim hangs off the GROUP, not off the tyre. The tyre is already turned
+      // z+90°, so parenting here (as the old cylinder did) turned the rim a second time
+      // and stood it on edge — invisible on a symmetric cylinder, very visible once the
+      // rim has spokes.
+      const hb = new THREE.Mesh(rimGeo(r, width, wIdx), hub);
       hb.rotation.z = Math.PI / 2;
-      w.add(hb);
+      hb.castShadow = true;
+      wg.add(hb);
       if (wIdx === 2) {                                            // deep-dish: cream outer ring
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.72, 0.045, 6, 14), toonMat(0xf4ecdd));
+        const ring = new THREE.Mesh(WHEEL.dish(r), toonMat(0xf4ecdd));
         ring.rotation.y = Math.PI / 2;
-        w.add(ring);
-      }
-      if (wIdx === 1) {                                            // classic: center cap
-        const cap = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.2, r * 0.2, width + 0.06, 8), dark);
-        cap.rotation.z = Math.PI / 2;
-        w.add(cap);
+        wg.add(ring);
       }
       wg.position.set(x, r, z);
       wg.userData.front = !!front;
