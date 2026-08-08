@@ -32,7 +32,7 @@
   let haptics = (localStorage.getItem('vc_haptics') ?? 'on') === 'on';
   window.MUSICVOL = VOL.mus;
   function applyVolumes() {
-    if (engBus) engBus.gain.value = 1.55 * VOL.eng;    // the engine OWNS the mix
+    if (engBus) engBus.gain.value = 1.9 * VOL.eng;     // the engine OWNS the mix
     if (fxBus)  fxBus.gain.value  = VOL.fx;
     if (ambBus) ambBus.gain.value = VOL.fx;
     window.MUSICVOL = VOL.mus;
@@ -224,20 +224,39 @@
     const anyBuf = () => Object.values(S).find(b => b && b.duration);
     const drive = ctx.createWaveShaper();
     const n2 = 512, curve = new Float32Array(n2);
-    for (let i = 0; i < n2; i++) { const x = (i / (n2 - 1)) * 2 - 1; curve[i] = Math.tanh(2.6 * x) / Math.tanh(2.6); }
-    drive.curve = curve; drive.oversample = '2x';
+    for (let i = 0; i < n2; i++) { const x = (i / (n2 - 1)) * 2 - 1; curve[i] = Math.tanh(4.2 * x) / Math.tanh(4.2); }
+    drive.curve = curve; drive.oversample = '4x';
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = V.bright; lp.Q.value = 0.9;
     const shelf = ctx.createBiquadFilter(); shelf.type = 'lowshelf'; shelf.frequency.value = 160; shelf.gain.value = 0;
     const g = ctx.createGain(); g.gain.value = 0;
     drive.connect(lp); lp.connect(shelf); shelf.connect(g);
-    // Haas widener: dry copy pushed left, a ~14ms-delayed copy pushed right — the engine
-    // wraps AROUND you instead of sitting in the middle ("stereo like crazy")
+    // THE 2AM CAMRY: parallel straight-pipe rasp — a tap off the drive runs through a
+    // hard clipper + a fart-can resonance and rejoins ABOVE the lowpass, so the shred
+    // gets through no matter how dark the marque voice is. raspG rides rpm + throttle.
+    // (Filtered copies of the engine, never a bare oscillator — the tinnitus rule holds.)
+    const raspHP = ctx.createBiquadFilter(); raspHP.type = 'highpass'; raspHP.frequency.value = 650; raspHP.Q.value = 0.7;
+    const raspShape = ctx.createWaveShaper();
+    const rc = new Float32Array(512);
+    for (let i = 0; i < 512; i++) { const x = (i / 511) * 2 - 1; rc[i] = clamp(x * 3.5, -0.8, 0.8); }
+    raspShape.curve = rc; raspShape.oversample = '2x';
+    const can = ctx.createBiquadFilter(); can.type = 'peaking'; can.frequency.value = 1500; can.Q.value = 2.4; can.gain.value = 9;
+    // 13ms delay + INVERTED polarity (raspG runs negative): measured against the other
+    // three wirings this sums hottest with the main path (+5.8dB bus, biggest 2.6-8k
+    // gain). The delay also sits the shred behind you like a real pipe.
+    const raspD = ctx.createDelay(0.05); raspD.delayTime.value = 0.013;
+    const raspG = ctx.createGain(); raspG.gain.value = 0;
+    drive.connect(raspHP); raspHP.connect(raspShape); raspShape.connect(can); can.connect(raspD); raspD.connect(raspG); raspG.connect(g);
+    // stereo THROUGH THE ROOF: hard-panned asymmetric Haas (7ms L / 19ms R) with a dry
+    // center anchor — full wraparound on headphones, no hollow comb on the phone speaker
     if (ctx.createStereoPanner) {
-      const pL = ctx.createStereoPanner(); pL.pan.value = -0.6;
-      const pR = ctx.createStereoPanner(); pR.pan.value = 0.6;
-      const dR = ctx.createDelay(0.05); dR.delayTime.value = 0.014;
-      g.connect(pL); pL.connect(engBus);
+      const pL = ctx.createStereoPanner(); pL.pan.value = -0.95;
+      const pR = ctx.createStereoPanner(); pR.pan.value = 0.95;
+      const dL = ctx.createDelay(0.05); dL.delayTime.value = 0.007;
+      const dR = ctx.createDelay(0.05); dR.delayTime.value = 0.019;
+      const cG = ctx.createGain(); cG.gain.value = 0.55;
+      g.connect(dL); dL.connect(pL); pL.connect(engBus);
       g.connect(dR); dR.connect(pR); pR.connect(engBus);
+      g.connect(cG); cG.connect(engBus);
     } else g.connect(engBus);
     const mkLoop = (buf) => {
       const src = ctx.createBufferSource(); src.buffer = buf || anyBuf(); src.loop = true;
@@ -253,7 +272,7 @@
     const subG = ctx.createGain(); subG.gain.value = 0;
     subO.connect(subG); subG.connect(drive);
     subO.start();
-    Object.assign(PE, { built: true, chassis, V, drive, lp, shelf, g, bands, vocal,
+    Object.assign(PE, { built: true, chassis, V, drive, lp, shelf, g, bands, vocal, raspG,
       pullF0: vocal ? VM_PULL_F0 : PULL_F0,
       hasBank: !!(S.gtidle && S.gtlow && S.gtmid && S.gtpull),
       pullSrc: pull.src, pullG: pull.g, subO, subG });
@@ -279,7 +298,7 @@
     const load = thr * (0.45 + rpm * 0.55) * (player.boostT > 0 ? 1.15 : 1);
     const pullTaper = F0 > 280 ? 0.45 : 1;          // top end: the stretched mid carries the scream
     setT(PE.pullSrc.playbackRate, clamp(F / (PE.pullF0 || PULL_F0), 0.5, 3.0), 0.03);
-    setT(PE.pullG.gain, load * pullTaper * 0.95, 0.05);
+    setT(PE.pullG.gain, load * pullTaper * 1.05, 0.05);
     // bank crossfade: tent weights in log-frequency, equal-power shaped
     const lf = Math.log(F0), bandMix = (1 - load * 0.35) * 0.85;
     for (let i = 0; i < PE.bands.length; i++) {
@@ -298,8 +317,11 @@
     }
     setT(PE.subO.frequency, clamp(F * 0.5, 30, 140), 0.04);
     PE.subG.gain.value = V.sub * (0.25 + rpm * 0.5);
-    setT(PE.lp.frequency, V.bright * (0.45 + rpm * 0.9 + thr * 0.35), 0.05);
-    const base = active ? (0.34 + Math.min(speed / 260, 0.14)) * (0.70 + thr * 0.40) * lope : 0;
+    setT(PE.lp.frequency, V.bright * (0.5 + rpm * 1.4 + thr * 0.5), 0.05);
+    // the camry layer: a putter at idle, ear-shredding at full send (ducked for the Vocalmotor —
+    // Adam's voice stays a voice)
+    if (PE.raspG) setT(PE.raspG.gain, active ? -(0.12 + rpm * 0.6) * (0.45 + thr * 0.55) * (PE.vocal ? 0.3 : 1) : 0, 0.06);
+    const base = active ? (0.40 + Math.min(speed / 260, 0.16)) * (0.68 + thr * 0.45) * lope : 0;
     setT(PE.g.gain, base * (cockpit ? 1.35 : 1), 0.06);
     PE.shelf.gain.value = cockpit ? 7 : 0;                          // engine in your chest
     // turbo: spool silently with sustained throttle, PSSSH on lift. (The constant
@@ -319,12 +341,14 @@
         spool = 0.12;
       }
     }
-    // off-throttle crackle: lift at revs -> pop-pop-crackle
-    if (thr < 0.1 && lastThr >= 0.6 && rpm > 0.4) popT = rnd(0.25, 0.5);
+    // off-throttle burble: lift at revs -> a long angry BRBRBRAP down the whole decel
+    if (thr < 0.1 && lastThr >= 0.6 && rpm > 0.3) popT = rnd(0.45, 0.9);
     if (popT > 0) {
       popT -= dt;
-      if (Math.random() < dt * 11) pop(rnd(0.05, 0.13) * (0.4 + rpm), rnd(150, 380));
+      if (Math.random() < dt * 16) pop(rnd(0.08, 0.19) * (0.4 + rpm), rnd(140, 420), rnd(-0.5, 0.5));
     }
+    // on-throttle spit: near redline the straight pipe crackles even WITH your foot in it
+    if (thr > 0.85 && rpm > 0.78 && Math.random() < dt * 2.2) pop(rnd(0.04, 0.09), rnd(400, 900), rnd(-0.4, 0.4));
     // damage misfire: the coughs get real bangs
     const d = player.dmg;
     if (d && d.engine < 0.85 && Math.random() < dt * (1 - d.engine) * 2.2) pop(0.12, 130);
@@ -787,9 +811,9 @@
     // a compressor keeps the hot engine mix loud-but-clean instead of clipping;
     // makeup gain after it = phone-speaker LOUD ("let me really feel im there")
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -16; comp.knee.value = 16; comp.ratio.value = 6;
+    comp.threshold.value = -18; comp.knee.value = 14; comp.ratio.value = 7;
     comp.attack.value = 0.004; comp.release.value = 0.22;
-    const makeup = ctx.createGain(); makeup.gain.value = 1.4;
+    const makeup = ctx.createGain(); makeup.gain.value = 1.55;
     comp.connect(makeup); makeup.connect(A.master);
     engBus.connect(comp); fxBus.connect(comp); ambBus.connect(comp);
     engBus.connect(sendConv); fxBus.connect(sendConv);
