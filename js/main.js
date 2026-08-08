@@ -1968,6 +1968,13 @@ function stepCar(car, input, dt) {
   gearStep(car, speed);
   car._brake = input.brake;                        // remembered for the brake lights
   const PM = car.isPlayer && window.ECON && ECON.mods ? ECON.mods() : null;   // garage parts
+  // A WRECK IS NOT A CAR. Everything below is the tire model, and a tumbling kart has
+  // no tire pointing where a tire should point — so while car.crash is set we run it
+  // and then throw the result away, keeping only honest forces (see the wreck branch
+  // at the velocity commit). CRASHPHYS in speedfx.js owns the attitude and feeds its
+  // yaw back into car.heading; gravity below owns the arc.
+  const wreck = !!car.crash;
+  const wvX = car.velX, wvZ = car.velZ;
 
   // grip rises a little with speed (downforce); rain takes a mild cut (weather.js)
   const gripBase = surf.grip * WEATHER.gripMul * (PM ? PM.grip : 1) * (1 + PHYS.downforce * Math.min(speed / 40, 1.4));
@@ -1987,7 +1994,7 @@ function stepCar(car, input, dt) {
   if (input.handbrake && speed > 3)
     yaw += PHYS.hbYaw * THREE.MathUtils.clamp(input.steer, -1, 1) * Math.min(speed / 16, 1);
   const vDir0 = speed > 6 ? Math.atan2(car.velX, car.velZ) : car.heading;   // travel direction pre-yaw
-  car.heading += yaw * dt;
+  if (!wreck) car.heading += yaw * dt;                                      // wrecks steer with physics, not the wheel
   // slide governor (drift only): tires saturate ~38° — the nose snaps out and HOLDS there,
   // a rally angle you can sit on, instead of pirouetting past the velocity vector.
   if (input.handbrake && speed > 6) {
@@ -2043,9 +2050,18 @@ function stepCar(car, input, dt) {
   }
   car.slip = Math.abs(vl);
 
-  car.velX = fX * vf + rX * vl;
-  car.velZ = fZ * vf + rZ * vl;
-  if (speed < 0.4 && input.throttle === 0 && input.brake === 0) { car.velX = 0; car.velZ = 0; }
+  if (wreck) {
+    // the honest forces: air barely touches you in the sky, and once you're down it's
+    // bodywork dragging on tarmac — isotropic, because a wreck doesn't care which way
+    // it's facing. No grip, no brakes, no engine. You are cargo.
+    const dec = Math.exp(-(car.air ? 0.05 : 2.2) * dt);
+    car.velX = wvX * dec; car.velZ = wvZ * dec;
+    car.slip = Math.hypot(car.velX, car.velZ);        // all of it is slip now (speedfx sparks off this)
+  } else {
+    car.velX = fX * vf + rX * vl;
+    car.velZ = fZ * vf + rZ * vl;
+    if (speed < 0.4 && input.throttle === 0 && input.brake === 0) { car.velX = 0; car.velZ = 0; }
+  }
 
   // Cầu Nổi (Đồi Chó Nhảy): the floating straight sways underwheel — learnable, never unfair
   if (!track.open && track.def && track.def.pontoon) {
@@ -2110,13 +2126,19 @@ function stepCar(car, input, dt) {
     if (car.onRoad) surfY += track.roadLift || 0;
   }
   if (car.air) {                                   // the Jack: ballistic glide down the track
-    car.air.vy -= 14 * dt;                         // floatier than real gravity, by decree
+    car.air.vy -= (wreck ? 21 : 14) * dt;          // floatier than real gravity, by decree — but a wreck FALLS
     car.y += car.air.vy * dt;
-    if (car.air.vy < 0 && car.y <= surfY) { car.y = surfY; car.air = null; }
+    if (car.air.vy < 0 && car.y <= surfY) {
+      car.y = surfY;
+      car._land = -car.air.vy;                     // how hard it came down (speedfx: thud, dust, debris)
+      // tarmac gives some of it back: a wreck bounces, and every touchdown is its own hit
+      if (wreck && car.air.vy < -6.5) car.air = { vy: -car.air.vy * 0.36 };
+      else car.air = null;
+    }
   } else {
     car.y += (surfY - car.y) * Math.min(1, dt * 12);
   }
-  if (car.spun > 0) { car.spun -= dt; car.heading += dt * 9; }   // spin-out pirouette
+  if (car.spun > 0) { car.spun -= dt; if (!wreck) car.heading += dt * 9; }   // spin-out pirouette
 
   if (!track.open) {
     const sp = track.samples[car.idx];
@@ -2127,10 +2149,17 @@ function stepCar(car, input, dt) {
       car.z = sp.z + nz * track.outerLimit;
       const vOut = car.velX * nx + car.velZ * nz;
       if (vOut > 0) {
+        const alreadyWrecked = !!car.crash;
         if (window.DMG) DMG.impact(car, vOut);       // walls hurt now
-        car.velX -= vOut * nx * 1.35;
-        car.velZ -= vOut * nz * 1.35;
-        car.velX *= 0.9; car.velZ *= 0.9;
+        // If THAT hit just started a crash, the deflection is already set — bouncing it
+        // again off the same wall subtracts the momentum twice and the wreck stops dead
+        // instead of being thrown across the road. A wreck that hits the wall a SECOND
+        // time still bounces like anything else.
+        if (!car.crash || alreadyWrecked) {
+          car.velX -= vOut * nx * 1.35;
+          car.velZ -= vOut * nz * 1.35;
+          car.velX *= 0.9; car.velZ *= 0.9;
+        }
       }
     }
     // forked sections (Puentes Coliseo): a divider island splits the road — pick a

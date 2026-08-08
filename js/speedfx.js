@@ -159,6 +159,61 @@
     setTimeout(() => playBuf('scrape' + (Math.random() < 0.5 ? 0 : 1), 1.12, 0.5 * k), 190); // …and the whoosh-grind
   }
 
+  // ---------------------------------------------------------------- THE LOUD SILENCE
+  // The moment you leave the ground everything drops away: the whole mix ducks and goes
+  // muffled, and all that's left is air moving past you. Then you land and it ALL comes
+  // back at once, louder than it left. The silence is the thing that makes the impact
+  // hurt — it's the trick every crash-compilation editor uses.
+  // (Filtered noise only. Never a pure tone — see the tinnitus rule in roar.js.)
+  let mixLP = null, mixG = null, windG = null, windF = null, mixOn = false, silK = 0;
+  function ensureMix() {
+    if (mixOn || typeof audio === 'undefined' || !audio || !audio.ctx || !audio.master) return;
+    const ctx = audio.ctx;
+    try {
+      mixLP = ctx.createBiquadFilter(); mixLP.type = 'lowpass'; mixLP.frequency.value = 22000;
+      mixG = ctx.createGain(); mixG.gain.value = 1;
+      audio.master.disconnect();                       // splice the duck in ahead of the speakers
+      audio.master.connect(mixLP); mixLP.connect(mixG); mixG.connect(ctx.destination);
+      const b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = b; src.loop = true;
+      windF = ctx.createBiquadFilter(); windF.type = 'bandpass'; windF.frequency.value = 380; windF.Q.value = 0.5;
+      windG = ctx.createGain(); windG.gain.value = 0;
+      src.connect(windF); windF.connect(windG); windG.connect(ctx.destination);  // wind bypasses its own duck
+      src.start();
+      mixOn = true;
+    } catch (e) { mixOn = false; }
+  }
+  function slam(hard) {                                // touchdown: the world kicks the door in
+    if (!mixOn) return;
+    const t = audio.ctx.currentTime, k = Math.min(1, hard / 14);
+    silK = 0;
+    mixG.gain.cancelScheduledValues(t);
+    mixG.gain.setValueAtTime(1 + 0.3 * k, t);
+    mixG.gain.setTargetAtTime(1, t + 0.03, 0.3);
+    mixLP.frequency.cancelScheduledValues(t);
+    mixLP.frequency.setValueAtTime(22000, t);
+    windG.gain.cancelScheduledValues(t);
+    windG.gain.setTargetAtTime(0, t, 0.08);
+  }
+  function crashMix(dt) {
+    if (typeof player === 'undefined' || !player) return;
+    ensureMix();
+    if (!mixOn) return;
+    // gated on actually racing: if a race ever ends mid-flight, the duck must let go
+    // rather than leave the menu sounding like it's underwater
+    const racing = typeof state === 'undefined' || state === 'race' || state === 'tt' || state === 'freeroam';
+    const flying = !!(player.crash && player.air) && racing;
+    silK = flying ? Math.min(1, silK + dt * 6) : Math.max(0, silK - dt * 3.2);
+    if (silK <= 0.001 && !flying) return;              // idle: leave the graph alone
+    const t = audio.ctx.currentTime, k = silK;
+    mixG.gain.setTargetAtTime(1 - k * 0.85, t, 0.04);
+    mixLP.frequency.setTargetAtTime(22000 - k * 21500, t, 0.05);
+    windG.gain.setTargetAtTime(k * 0.34, t, 0.07);
+    windF.frequency.setTargetAtTime(300 + k * 520, t, 0.12);
+  }
+
   // real crumple: shove the nose vertices back like crushed sheet metal.
   // Every kart's welded geometry is unique to it, so mutating in place is safe.
   function crumple(c, sev) {
@@ -225,32 +280,43 @@
     }
   }
 
-  function crashFX(c, dt) {
-    // one-shot triggers set by damage.js
-    if (c._boom) { boomSound(c, c._boom); if (c._boom > 105) throwDebris(c, 5 + Math.floor(Math.random() * 5)); c._boom = 0; }
-    if (c._crumple) { crumple(c, c._crumple); c._crumple = 0; }
+  // ---------------------------------------------------------------- CRASHPHYS
+  // The wreck is SIMULATED, not animated. damage.js seeds angular velocity from the
+  // geometry of the hit (square = end over end, glancing = barrel roll) and after that
+  // nothing is on rails: main.js gravity owns the arc and the bounces, this owns the
+  // attitude, and ground contact trades the two against each other — a car sliding on
+  // its roof digs in and keeps rolling, rotation scrubs speed, speed feeds rotation.
+  // It ends when it runs out of energy, wherever that is. No phases, no timers.
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  function crashPhys(c, dt) {
     const cr = c.crash;
-    if (!cr || !c.mesh) return;
-    cr.life = (cr.life || 0) + dt;
-    if (cr.life > 7) { delete c.crash; c._tumbleA = 0; return; }        // failsafe: nobody stays crashed forever
     const speed = Math.hypot(c.velX || 0, c.velZ || 0);
-    if (cr.phase === 'fly') {
-      c._tumbleA = (c._tumbleA || 0) + cr.roll * dt;                    // tumbling through the air
+    const air = !!c.air;
+    cr.life += dt;
+
+    if (air) {
+      const d = Math.exp(-0.22 * dt);            // air hardly touches a tumble
+      cr.wr *= d; cr.wp *= d; cr.wy *= d;
       c._smkT = (c._smkT || 0) - dt;
       if (c._smkT <= 0) { c._smkT = 0.08; puff(smokes, c.x, c.y + 0.4, c.z, 1.1, 0.7, 0.6); }
-      if (!c.air) {                                                     // touchdown
-        cr.phase = 'skid';
-        const q = Math.PI / 2;
-        cr.rest = Math.round((c._tumbleA || 0) / q) * q;
-        if (Math.abs(((cr.rest % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) < 0.01) cr.rest += q;  // land WRECKED, not upright
-        boomSound(c, 60);                                               // the landing thud
-        for (let k = 0; k < 6; k++) puff(dusts, c.x + (Math.random() - 0.5) * 2, c.y + 0.15, c.z + (Math.random() - 0.5) * 2, 1.3, 0.7, 0.9);
+    } else {
+      // cos(roll) tells us which face is down: +1 on the wheels, -1 on the roof, 0 on a door
+      const up = Math.cos(cr.rA);
+      if (Math.abs(up) < 0.72 && speed > 5) {
+        // it's riding an edge — that edge digs into the tarmac and levers the car
+        // further over. THIS is the rolling crash, and it's emergent: keep the speed
+        // up and it keeps going over, run out of speed and it drops where it is.
+        cr.wr = clamp(cr.wr + Math.sign(cr.wr || 1) * speed * 0.5 * dt, -13, 13);
       }
-    } else if (cr.phase === 'skid') {
-      cr.skid -= dt;
-      c._tumbleA += (cr.rest - c._tumbleA) * Math.min(1, dt * 9);       // settle onto the bodywork
-      c.velX *= Math.exp(-2.1 * dt); c.velZ *= Math.exp(-2.1 * dt);     // the long grind to a stop
-      if (speed > 5) {
+      cr.wr *= Math.exp(-2.4 * dt);              // tarmac eats rotation
+      cr.wp *= Math.exp(-5.0 * dt);
+      cr.wy *= Math.exp(-2.4 * dt);
+      // …and rotation eats speed: a car scrubbing sideways on its bodywork stops fast
+      const bite = Math.min(2.4, Math.abs(cr.wr) * 0.12 + (1 - Math.abs(up)) * 0.9);
+      const dec = Math.exp(-bite * dt);
+      c.velX *= dec; c.velZ *= dec;
+      // sparks + smoke wherever metal is touching road
+      if (speed > 4 && Math.abs(up) < 0.9) {
         c._skT = (c._skT || 0) - dt;
         if (c._skT <= 0) {
           c._skT = 0.05;
@@ -261,14 +327,43 @@
         c._scrT = (c._scrT || 0) - dt;
         if (c._scrT <= 0) { c._scrT = 0.34; playBuf('scrape' + (Math.random() < 0.5 ? 0 : 1), 0.9 + Math.random() * 0.3, 0.4 * attn(c)); }
       }
-      if (cr.skid <= 0 && speed < 14) cr.phase = 'out';
-    } else if (cr.phase === 'out') {
-      const q2 = Math.PI * 2;
-      const target = Math.round((c._tumbleA || 0) / q2) * q2;           // roll back onto the wheels
-      c._tumbleA += (target - c._tumbleA) * Math.min(1, dt * 7);
-      if (Math.abs(c._tumbleA - target) < 0.05) { c._tumbleA = 0; delete c.crash; }
     }
-    if (c._tumbleA) { c.mesh.rotateZ(c._tumbleA); c.mesh.rotateX(c._tumbleA * 0.22); }
+
+    cr.rA += cr.wr * dt;
+    cr.pA += cr.wp * dt;
+    c.heading += cr.wy * dt;                     // yaw IS heading — it spins as it slides
+
+    // has it run out? then it rocks back down onto its wheels and hands you the car back
+    const spin = Math.abs(cr.wr) + Math.abs(cr.wp) + Math.abs(cr.wy);
+    if (!air && speed < 3.5 && spin < 1.4) {
+      const tgt = Math.round(cr.rA / (Math.PI * 2)) * Math.PI * 2;
+      cr.rA += (tgt - cr.rA) * Math.min(1, dt * 4.5);
+      cr.pA *= Math.exp(-6 * dt);
+      cr.wr *= 0.2; cr.wp *= 0.2; cr.wy *= 0.2;
+      if (Math.abs(cr.rA - tgt) < 0.05) { c._tumbleA = 0; delete c.crash; return; }
+    }
+    if (cr.life > 11) { c._tumbleA = 0; delete c.crash; return; }   // failsafe: nobody crashes forever
+
+    c.mesh.rotateZ(cr.rA);
+    c.mesh.rotateX(cr.pA);
+  }
+
+  function crashFX(c, dt) {
+    // one-shot triggers set by damage.js
+    if (c._boom) { boomSound(c, c._boom); if (c._boom > 105) throwDebris(c, 5 + Math.floor(Math.random() * 5)); c._boom = 0; }
+    if (c._crumple) { crumple(c, c._crumple); c._crumple = 0; }
+    // every touchdown is its own event — main.js sets _land to the speed it came down at
+    if (c._land) {
+      const hard = c._land; c._land = 0;
+      if (c.crash && hard > 3) {
+        boomSound(c, Math.min(120, 22 + hard * 6));
+        for (let k = 0; k < Math.min(9, 3 + hard * 0.5); k++)
+          puff(dusts, c.x + (Math.random() - 0.5) * 2, c.y + 0.15, c.z + (Math.random() - 0.5) * 2, 1.3, 0.7, 0.9);
+        if (hard > 9) throwDebris(c, 2 + Math.floor(Math.random() * 3));
+        if (c.isPlayer) slam(hard);                  // the mix comes back on like a door
+      }
+    }
+    if (c.crash && c.mesh) crashPhys(c, dt);
   }
 
   function ensureBumper(c) {
@@ -391,10 +486,14 @@
       for (const c of cars) carFX(c, dt);
     stepPools(dt);
     stepDebris(dt);
+    crashMix(dt);
     drawSpeedLines();
   }
 
-  window.SPEEDFX = { update, sparks, puffSmoke: (x, y, z, s) => puff(smokes, x, y, z, s || 1, 0.8, 1.3) };
+  window.SPEEDFX = { update, sparks, puffSmoke: (x, y, z, s) => puff(smokes, x, y, z, s || 1, 0.8, 1.3),
+    // debug tap for headless verification of the loud silence
+    _mix: () => (mixOn ? { k: +silK.toFixed(3), gain: +mixG.gain.value.toFixed(3),
+                           lp: Math.round(mixLP.frequency.value), wind: +windG.gain.value.toFixed(3) } : null) };
 
   // ---- hooks ----
   const _ucv = window.updateCarVisuals;

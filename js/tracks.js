@@ -320,6 +320,8 @@ const TRACKS = [
     env: 'forest',
     laps: 1,
     stage: true,                                    // open curve: start beam -> finish beam
+    damage: true,                                   // THE ONLY VENUE THAT BREAKS YOUR CAR (damage.js breakable()):
+                                                    // flats, sick engines, torn bumpers. One pass, no lap to fix it.
     points: [
       [0, 0, 0], [130, -20, 4], [250, -60, 9], [350, -140, 6],
       [420, -250, 13], [380, -370, 9], [280, -430, 15],
