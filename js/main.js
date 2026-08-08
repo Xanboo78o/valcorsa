@@ -1967,6 +1967,7 @@ function stepCar(car, input, dt) {
   const speed = Math.hypot(car.velX, car.velZ);
   gearStep(car, speed);
   car._brake = input.brake;                        // remembered for the brake lights
+  car._throttle = input.throttle;                  // …and for the wheels, which spin even when you don't move
   const PM = car.isPlayer && window.ECON && ECON.mods ? ECON.mods() : null;   // garage parts
   // A WRECK IS NOT A CAR. Everything below is the tire model, and a tumbling kart has
   // no tire pointing where a tire should point — so while car.crash is set we run it
@@ -3515,9 +3516,13 @@ function updateCarVisuals(dt) {
     car.mesh.quaternion.setFromRotationMatrix(_m);
 
     const speed = Math.hypot(car.velX, car.velZ);
+    // Wheels turn at WHEEL speed, not ground speed. Pinned against a wall with your foot
+    // down, the car isn't going anywhere but the tires are still spinning — the wall
+    // stopped the car, not the engine.
+    const spin = speed + (car._throttle || 0) * Math.max(0, 20 - speed);
     for (const w of car.mesh.userData.wheels) {
       if (w.userData.front) w.rotation.y = car.steer * 2.4;
-      w.children[0].rotation.x += speed * dt / 0.45;
+      w.children[0].rotation.x += spin * dt / 0.45;
     }
 
     // lights: headlights at night/in weather, brake lights on the pedal

@@ -288,6 +288,40 @@
   // its roof digs in and keeps rolling, rotation scrubs speed, speed feeds rotation.
   // It ends when it runs out of energy, wherever that is. No phases, no timers.
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  // A kart's mesh origin sits on the ground (wheels are placed at y = radius), so rolling
+  // it about that origin swings the bodywork straight through the tarmac. Cache the eight
+  // corners of the kart's true local bounding box once, then each frame transform them by
+  // the live matrix and read the real lowest point — a box estimate isn't enough, because
+  // blocks are placed with their own rotations and a rolled kart's widest point isn't
+  // where the naive half-width says it is.
+  const _cv = new THREE.Vector3();
+  function bodyCorners(c) {
+    if (c._bc) return c._bc;
+    const m = c.mesh;
+    const q = m.quaternion.clone(), p = m.position.clone();
+    m.quaternion.identity(); m.position.set(0, 0, 0);
+    m.updateMatrixWorld(true);
+    // Corners of every BLOCK, not one box round the whole kart. These karts are built of
+    // boxes, so per-block corners are the exact silhouette — one big AABB has corners
+    // sticking out into thin air, and an upside-down kart would hover half a unit off the
+    // road resting on a corner that doesn't exist. Meshes only: the name-tag sprite floats
+    // at y = 3.1 and would hold the whole wreck up in the air.
+    const out = [];
+    m.traverse((o) => {
+      if (!o.isMesh || !o.geometry || out.length > 480) return;
+      if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+      const b = o.geometry.boundingBox;
+      if (!b || !isFinite(b.min.y)) return;
+      for (let i = 0; i < 8; i++)
+        out.push(new THREE.Vector3((i & 1) ? b.max.x : b.min.x,
+                                   (i & 2) ? b.max.y : b.min.y,
+                                   (i & 4) ? b.max.z : b.min.z).applyMatrix4(o.matrixWorld));
+    });
+    m.quaternion.copy(q); m.position.copy(p);
+    m.updateMatrixWorld(true);
+    if (!out.length) out.push(new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1.4, 0));
+    return (c._bc = out);
+  }
   function crashPhys(c, dt) {
     const cr = c.crash;
     const speed = Math.hypot(c.velX || 0, c.velZ || 0);
@@ -346,6 +380,21 @@
 
     c.mesh.rotateZ(cr.rA);
     c.mesh.rotateX(cr.pA);
+
+    // …and ride ON the tarmac instead of through it. Measured against the last known
+    // ground height, so it fades out as the kart gets air and comes back as it lands —
+    // no pop on the bounces.
+    if (!c.air) c._gy = c.y;
+    const gy = (c._gy != null) ? c._gy : c.y;
+    const corners = bodyCorners(c);
+    c.mesh.updateMatrix();                       // karts hang off the scene root: matrix == world
+    let minY = Infinity;
+    for (let i = 0; i < corners.length; i++) {
+      _cv.copy(corners[i]).applyMatrix4(c.mesh.matrix);
+      if (_cv.y < minY) minY = _cv.y;
+    }
+    const need = gy - minY + 0.03;               // a little skin so it rides on the surface
+    if (need > 0) c.mesh.position.y += need;
   }
 
   function crashFX(c, dt) {
